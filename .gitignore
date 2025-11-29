@@ -12,3 +12,10 @@ __pycache__/
 
 # Database (We usually don't want local DBs on GitHub)
 db.sqlite3
+
+# --- FLUTTER IGNORES ---
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
