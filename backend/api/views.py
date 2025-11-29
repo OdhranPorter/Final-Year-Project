@@ -19,7 +19,7 @@ def summarize_text(request):
 
     try:
         # 2. Configure the Gemini Model
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
 
         # 3. Create a prompt
         prompt = f"Summarize the following study notes into 3 concise bullet points:\n\n{user_text}"
