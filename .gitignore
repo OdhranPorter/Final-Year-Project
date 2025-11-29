@@ -1,0 +1,14 @@
+# Security
+.env
+.DS_Store
+
+# Environments
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Database (We usually don't want local DBs on GitHub)
+db.sqlite3
