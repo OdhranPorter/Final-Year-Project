@@ -44,4 +44,4 @@ StudiBro is a **full-stack mobile application** with a clear separation between 
 - **Backend:** Django REST Framework (Python)
 - **AI Model:** Google Gemini API
 - **Computer Vision:** Google ML Kit
-- **Database:** SQLite / PostgreSQL
+- **Database:** SQLite 
