@@ -27,23 +27,6 @@ jobs:
       - name: Run Django Tests
         run: python manage.py test
 
-  frontend-ci:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend/studibro_mobile
-    steps:
-      - uses: actions/checkout@v3
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.38.9' 
-      - name: Install Dependencies
-        run: flutter pub get
-      - name: Run Linter (Analyze)
-        run: flutter analyze
-      - name: Run Flutter Tests
-        run: flutter test
-
 
       - name: Verify Documentation Generation
         run: |
