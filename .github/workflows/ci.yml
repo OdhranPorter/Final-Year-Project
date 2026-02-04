@@ -13,10 +13,10 @@ jobs:
       run:
         working-directory: ./backend
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
           
@@ -37,7 +37,7 @@ jobs:
       run:
         working-directory: ./frontend/studibro_mobile
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.38.9'
