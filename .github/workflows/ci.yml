@@ -47,5 +47,6 @@ jobs:
 
       - name: Verify Documentation Generation
         run: |
-          pip install pdoc
-          pdoc . --output-dir docs-preview
+          pip install pdoc python-dotenv django djangorestframework django-cors-headers
+          # Tell pdoc exactly which folders to look at
+          pdoc api studibro_project --output-dir docs-preview
