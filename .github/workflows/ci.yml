@@ -24,7 +24,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install django djangorestframework django-cors-headers google-generativeai python-dotenv
+          pip install -r backend/requirements.txt
           
       - name: Run Django Tests
         run: python manage.py test
