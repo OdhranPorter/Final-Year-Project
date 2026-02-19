@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'session_screen.dart'; // Import the new session screen
+import 'login.dart';
+import 'session_screen.dart';
 
 void main() {
   runApp(const StudiBroApp());
@@ -14,25 +15,24 @@ class StudiBroApp extends StatelessWidget {
       title: 'StudiBro AI',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // Use Material 3
-        useMaterial3: true, 
-        // Use a modern, deep theme
+        useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.deepPurple,
-          primary: const Color(0xFF673AB7), // Deep Purple
-          secondary: const Color(0xFF03A9F4), // Light Blue
+          primary: const Color(0xFF673AB7),
+          secondary: const Color(0xFF03A9F4),
         ),
-        
-        // **CONFLICTING cardTheme REMOVED HERE**
-        
-        // Global styling for elevated buttons
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       ),
-      home: const HomeScreen(),
+      // --- ROUTE CONFIGURATION ---
+      initialRoute: '/login', //Force Login to appear first
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/home': (context) => const HomeScreen(),
+      },
     );
   }
 }
@@ -40,7 +40,6 @@ class StudiBroApp extends StatelessWidget {
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  // Widget for the selection cards
   Widget _buildSelectionCard({
     required BuildContext context,
     required IconData icon,
@@ -49,7 +48,6 @@ class HomeScreen extends StatelessWidget {
     required bool isImageMode,
   }) {
     return Card(
-      // The styling (elevation, shape, rounded corners) is now defined here, on the individual Card widget.
       elevation: 6,
       margin: const EdgeInsets.only(bottom: 24),
       child: InkWell(
@@ -95,58 +93,49 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text("StudiBro Home"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+          )
+        ],
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- Logo/Header ---
               const Center(
                 child: Column(
                   children: [
-                    SizedBox(height: 80, child: Icon(Icons.lightbulb_outline, size: 60, color: Color(0xFF673AB7))),
+                    SizedBox(height: 40, child: Icon(Icons.lightbulb_outline, size: 60, color: Color(0xFF673AB7))),
                     SizedBox(height: 8),
-                    Text(
-                      "StudiBro",
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      "Your AI-Powered Study Assistant",
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
+                    Text("StudiBro", style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900)),
+                    Text("Your AI-Powered Study Assistant", style: TextStyle(fontSize: 16, color: Colors.grey)),
                   ],
                 ),
               ),
               const SizedBox(height: 40),
-
-              // --- Main Options ---
               Text(
                 "How would you like to input your notes?",
                 style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-
-              // 1. Image/OCR Mode Card (Leads to Camera/Gallery)
               _buildSelectionCard(
                 context: context,
                 icon: Icons.camera_alt_rounded,
                 title: "Scan (Image/OCR)",
-                subtitle: "Capture text from physical textbooks or whiteboards.",
+                subtitle: "Capture text from physical textbooks.",
                 isImageMode: true,
               ),
-
-              // 2. Text Input Mode Card (Leads to Typing)
               _buildSelectionCard(
                 context: context,
                 icon: Icons.keyboard_alt_rounded,
                 title: "Paste (Manual Text)",
-                subtitle: "Paste notes from digital sources or type them in.",
+                subtitle: "Paste notes from digital sources.",
                 isImageMode: false,
               ),
             ],
