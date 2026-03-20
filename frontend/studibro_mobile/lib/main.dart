@@ -1,13 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'login.dart';
 import 'session_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const StudiBroApp());
 }
 
-class StudiBroApp extends StatelessWidget {
+class StudiBroApp extends StatefulWidget {
   const StudiBroApp({super.key});
+
+  @override
+  State<StudiBroApp> createState() => _StudiBroAppState();
+}
+
+class _StudiBroAppState extends State<StudiBroApp> {
+  String _initialRoute = '/login';
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthStatus();
+  }
+
+  Future<void> _checkAuthStatus() async {
+    const storage = FlutterSecureStorage();
+    try {
+      final token = await storage.read(key: 'auth_token');
+      if (token != null && mounted) {
+        setState(() {
+          _initialRoute = '/home';
+        });
+      }
+    } catch (e) {
+      // Default to login on any error
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +56,7 @@ class StudiBroApp extends StatelessWidget {
           ),
         ),
       ),
-      // --- ROUTE CONFIGURATION ---
-      initialRoute: '/login', //Force Login to appear first
+      initialRoute: _initialRoute,
       routes: {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
@@ -40,6 +68,14 @@ class StudiBroApp extends StatelessWidget {
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
+  Future<void> _logout(BuildContext context) async {
+    const storage = FlutterSecureStorage();
+    await storage.delete(key: 'auth_token');
+    if (context.mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
+  }
+
   Widget _buildSelectionCard({
     required BuildContext context,
     required IconData icon,
@@ -47,9 +83,7 @@ class HomeScreen extends StatelessWidget {
     required String subtitle,
     required bool isImageMode,
   }) {
-    return Card(
-      elevation: 6,
-      margin: const EdgeInsets.only(bottom: 24),
+    return Material(
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -60,29 +94,88 @@ class HomeScreen extends StatelessWidget {
           );
         },
         borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Row(
-            children: [
-              Icon(icon, size: 40, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.headlineSmall!.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    )),
-                    const SizedBox(height: 4),
-                    Text(subtitle, style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                      color: Colors.grey[600],
-                    )),
-                  ],
-                ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: isImageMode
+                  ? [
+                      Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      Theme.of(context).colorScheme.secondary.withOpacity(0.05),
+                    ]
+                  : [
+                      Colors.blue.withOpacity(0.1),
+                      Colors.cyan.withOpacity(0.05),
+                    ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(
+              color: isImageMode
+                  ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                  : Colors.blue.withOpacity(0.2),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isImageMode
+                    ? Theme.of(context).colorScheme.primary.withOpacity(0.08)
+                    : Colors.blue.withOpacity(0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
             ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isImageMode
+                        ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
+                        : Colors.blue.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 32,
+                    color: isImageMode
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.headlineSmall!.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                          color: Colors.grey[600],
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey[400],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -94,50 +187,110 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text("StudiBro Home"),
+        title: const Text("StudiBro Home", style: TextStyle(fontWeight: FontWeight.w600)),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 2,
+        centerTitle: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.logout, size: 20),
+              tooltip: "Logout",
+              onPressed: () => _logout(context),
+            ),
           )
         ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Center(
+              // Header Section with Logo
+              Center(
                 child: Column(
                   children: [
-                    SizedBox(height: 40, child: Icon(Icons.lightbulb_outline, size: 60, color: Color(0xFF673AB7))),
-                    SizedBox(height: 8),
-                    Text("StudiBro", style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900)),
-                    Text("Your AI-Powered Study Assistant", style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(
+                        Icons.lightbulb_outline,
+                        size: 60,
+                        color: Color(0xFF673AB7),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "StudiBro",
+                      style: Theme.of(context).textTheme.headlineLarge!.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      "Your AI-Powered Study Assistant",
+                      style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 40),
+
+              // Content Section
               Text(
                 "How would you like to input your notes?",
-                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.titleLarge!.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
               ),
               const SizedBox(height: 16),
+              Text(
+                "Choose between scanning physical documents or pasting digital notes",
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Selection Cards
               _buildSelectionCard(
                 context: context,
                 icon: Icons.camera_alt_rounded,
                 title: "Scan (Image/OCR)",
-                subtitle: "Capture text from physical textbooks.",
+                subtitle: "Capture text from physical textbooks and documents.",
                 isImageMode: true,
               ),
+              const SizedBox(height: 16),
               _buildSelectionCard(
                 context: context,
                 icon: Icons.keyboard_alt_rounded,
                 title: "Paste (Manual Text)",
-                subtitle: "Paste notes from digital sources.",
+                subtitle: "Paste or type notes from digital sources.",
                 isImageMode: false,
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),
