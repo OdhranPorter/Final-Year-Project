@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studibro_mobile/login.dart';
 
 void main() {
-  group('LoginScreen Tests', () => {
+  group('LoginScreen Tests', () {
     // check login screen shows all elements
     testWidgets('Login screen displays correctly', (WidgetTester tester) async {
       await tester.pumpWidget(

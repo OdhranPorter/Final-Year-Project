@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studibro_mobile/main.dart';
 import 'package:studibro_mobile/login.dart';
+import 'package:studibro_mobile/session_screen.dart';
 
 void main() {
   group('Integration Tests', () {
@@ -48,5 +49,3 @@ void main() {
     });
   });
 }
-
-import 'package:studibro_mobile/session_screen.dart';
