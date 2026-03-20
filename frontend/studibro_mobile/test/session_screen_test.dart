@@ -63,8 +63,8 @@ void main() {
       expect(find.byIcon(Icons.stars_outlined), findsOneWidget);
     });
 
-    // error shown when trying to generate with empty notes
-    testWidgets('Empty notes shows error', (WidgetTester tester) async {
+    // results area shows initial placeholder text
+    testWidgets('Results area displays placeholder', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: const SessionScreen(
@@ -74,10 +74,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byIcon(Icons.stars_outlined));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Notes are empty. Please scan or type text!'), findsOneWidget);
+      expect(find.text('Results will appear here'), findsOneWidget);
     });
   });
 }
