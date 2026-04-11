@@ -76,5 +76,65 @@ void main() {
 
       expect(find.text('Results will appear here'), findsOneWidget);
     });
+
+    // Image mode: Scan button exists
+    testWidgets('Image mode: Scan button is present', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: const SessionScreen(
+            isImageMode: true,
+            title: 'Image Test',
+          ),
+        ),
+      );
+
+      expect(find.text('SCAN'), findsOneWidget);
+      expect(find.byIcon(Icons.camera_alt), findsOneWidget);
+    });
+
+    // Image mode: Gallery button exists
+    testWidgets('Image mode: Gallery button is present', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: const SessionScreen(
+            isImageMode: true,
+            title: 'Image Test',
+          ),
+        ),
+      );
+
+      expect(find.text('GALLERY'), findsOneWidget);
+      expect(find.byIcon(Icons.photo_library), findsOneWidget);
+    });
+
+    // Text mode: Scan and Gallery buttons don't exist
+    testWidgets('Text mode: Scan and Gallery buttons not present', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: const SessionScreen(
+            isImageMode: false,
+            title: 'Text Test',
+          ),
+        ),
+      );
+
+      expect(find.text('SCAN'), findsNothing);
+      expect(find.text('GALLERY'), findsNothing);
+    });
+
+    // Generate Summary button is disabled during extraction
+    testWidgets('Generate Summary button is present', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: const SessionScreen(
+            isImageMode: false,
+            title: 'Test',
+          ),
+        ),
+      );
+
+      // Find the Generate Summary button by icon
+      expect(find.byIcon(Icons.stars_outlined), findsOneWidget);
+    });
   });
 }

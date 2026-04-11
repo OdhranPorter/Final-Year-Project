@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 class SessionScreen extends StatefulWidget {
   final bool isImageMode;
@@ -19,39 +20,150 @@ class _SessionScreenState extends State<SessionScreen> {
   final String backendUrl = 'http://192.168.0.8:8000/api/summarize/';
 
   final TextEditingController _textController = TextEditingController();
+  final ImagePicker _imagePicker = ImagePicker();
+  
   String _summary = "";
   bool _isLoading = false;
+  bool _isExtracting = false;
   File? _selectedImage;
+  late TextRecognizer _textRecognizer;
 
   @override
   void initState() {
     super.initState();
+    _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
     if (widget.isImageMode) {
-      Future.delayed(const Duration(milliseconds: 300), _pickImageAndSimulateOCR);
+      // Use addPostFrameCallback instead of Future.delayed for better testability
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _capturePhoto();
+        }
+      });
     }
   }
 
-  Future<void> _pickImageAndSimulateOCR() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+  /// Captures a photo from the device camera
+  Future<void> _capturePhoto() async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+      );
+      if (pickedFile != null) {
+        await _processSelectedImage(pickedFile);
+      }
+    } catch (e) {
+      _showErrorSnackbar('Camera Error', 'Failed to access camera: ${e.toString()}');
+    }
+  }
 
-    if (pickedFile != null) {
+  /// Picks a photo from the device gallery
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (pickedFile != null) {
+        await _processSelectedImage(pickedFile);
+      }
+    } catch (e) {
+      _showErrorSnackbar('Gallery Error', 'Failed to access gallery: ${e.toString()}');
+    }
+  }
+
+  /// Processes the selected image and extracts text from it
+  Future<void> _processSelectedImage(XFile imageFile) async {
+    final File imageFileObj = File(imageFile.path);
+
+    setState(() {
+      _selectedImage = imageFileObj;
+      _isExtracting = true;
+      _textController.text = "Extracting text...";
+    });
+
+    try {
+      final String extractedText = await _extractTextFromImage(imageFileObj.path);
+      
       setState(() {
-        _selectedImage = File(pickedFile.path);
-        
-        _textController.text = """
-Photosynthesis is the process used by plants, algae and certain bacteria to harness energy from sunlight and turn it into chemical energy. 
-
-There are two main types of photosynthetic processes: oxygenic photosynthesis and anoxygenic photosynthesis. The general principles of anoxygenic and oxygenic photosynthesis are very similar, but oxygenic photosynthesis is the most common and is seen in plants, algae and cyanobacteria.
-        """;
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Image Captured! Simulated Text Extracted."),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _textController.text = extractedText.isEmpty
+            ? "(No text detected in image. Try another image.)"
+            : extractedText;
+        _isExtracting = false;
       });
+
+      if (extractedText.isNotEmpty) {
+        _showInfoSnackbar('Success', 'Text extracted successfully!');
+      } else {
+        _showErrorSnackbar('No Text', 'No text detected in this image.');
+      }
+    } catch (e) {
+      setState(() {
+        _textController.text = "";
+        _isExtracting = false;
+      });
+      _showErrorSnackbar('Extraction Error', 'Failed to extract text: ${e.toString()}');
+    }
+  }
+
+  /// Extracts text from the image file using ML Kit (offline)
+  Future<String> _extractTextFromImage(String imagePath) async {
+    try {
+      final inputImage = InputImage.fromFilePath(imagePath);
+      final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
+
+      String extractedText = recognizedText.text.trim();
+      return extractedText;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Shows an error snackbar
+  void _showErrorSnackbar(String title, String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 4),
+              Text(message, style: const TextStyle(fontSize: 12)),
+            ],
+          ),
+          backgroundColor: Colors.red[600],
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  /// Shows a success snackbar
+  void _showInfoSnackbar(String title, String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 4),
+              Text(message, style: const TextStyle(fontSize: 12)),
+            ],
+          ),
+          backgroundColor: Colors.green[600],
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -164,7 +276,7 @@ There are two main types of photosynthetic processes: oxygenic photosynthesis an
                                 child: IconButton(
                                   icon: const Icon(Icons.refresh),
                                   tooltip: "Re-scan",
-                                  onPressed: _pickImageAndSimulateOCR,
+                                  onPressed: _isExtracting ? null : _capturePhoto,
                                 ),
                               )
                             : null,
@@ -173,12 +285,68 @@ There are two main types of photosynthetic processes: oxygenic photosynthesis an
                   ),
                   const SizedBox(height: 16),
 
+                  // Image Capture Buttons (for Image Mode)
+                  if (widget.isImageMode) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _isExtracting ? null : _capturePhoto,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              disabledBackgroundColor: Colors.grey[300],
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              elevation: 2,
+                            ),
+                            icon: Icon(
+                              _isExtracting ? Icons.hourglass_bottom : Icons.camera_alt,
+                              color: Colors.white,
+                            ),
+                            label: Text(
+                              _isExtracting ? "EXTRACTING..." : "SCAN",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _isExtracting ? null : _pickImageFromGallery,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.secondary,
+                              disabledBackgroundColor: Colors.grey[300],
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              elevation: 2,
+                            ),
+                            icon: const Icon(
+                              Icons.photo_library,
+                              color: Colors.white,
+                            ),
+                            label: const Text(
+                              "GALLERY",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   // Action Buttons
                   Row(
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: _isLoading ? null : _getSummary,
+                          onPressed: _isLoading || _isExtracting ? null : _getSummary,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Theme.of(context).colorScheme.primary,
                             disabledBackgroundColor: Colors.grey[300],
@@ -205,26 +373,6 @@ There are two main types of photosynthetic processes: oxygenic photosynthesis an
                           ),
                         ),
                       ),
-                      if (widget.isImageMode) ...[
-                        const SizedBox(width: 12),
-                        SizedBox(
-                          height: 52,
-                          width: 52,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _pickImageAndSimulateOCR,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.secondary,
-                              disabledBackgroundColor: Colors.grey[300],
-                              padding: const EdgeInsets.all(0),
-                              elevation: 3,
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ],
@@ -322,6 +470,7 @@ There are two main types of photosynthetic processes: oxygenic photosynthesis an
   @override
   void dispose() {
     _textController.dispose();
+    _textRecognizer.close();
     super.dispose();
   }
 }
