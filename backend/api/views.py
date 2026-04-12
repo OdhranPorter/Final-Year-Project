@@ -27,9 +27,9 @@ def summarize_text(request):
         # 3. Create a prompt
         prompt = f"Summarize the following study notes into 3 concise bullet points:\n\n{user_text}"
 
-        # 4. Generate Content using the Gemini 2.0 Flash model
+        # 4. Generate Content using the Gemini 2.5 Flash model
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-2.5-flash',
             contents=prompt
         )
         

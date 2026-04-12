@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'login.dart';
 import 'session_screen.dart';
+import 'auth_modal.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,28 +17,6 @@ class StudiBroApp extends StatefulWidget {
 }
 
 class _StudiBroAppState extends State<StudiBroApp> {
-  String _initialRoute = '/login';
-
-  @override
-  void initState() {
-    super.initState();
-    _checkAuthStatus();
-  }
-
-  Future<void> _checkAuthStatus() async {
-    const storage = FlutterSecureStorage();
-    try {
-      final token = await storage.read(key: 'auth_token');
-      if (token != null && mounted) {
-        setState(() {
-          _initialRoute = '/home';
-        });
-      }
-    } catch (e) {
-      // Default to login on any error
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -56,7 +35,7 @@ class _StudiBroAppState extends State<StudiBroApp> {
           ),
         ),
       ),
-      initialRoute: _initialRoute,
+      home: const HomeScreen(),
       routes: {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
@@ -65,14 +44,50 @@ class _StudiBroAppState extends State<StudiBroApp> {
   }
 }
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  Future<void> _logout(BuildContext context) async {
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String? _username;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    const storage = FlutterSecureStorage();
+    try {
+      final username = await storage.read(key: 'username');
+      if (mounted && username != null) {
+        setState(() => _username = username);
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+  }
+
+  Future<void> _logout() async {
     const storage = FlutterSecureStorage();
     await storage.delete(key: 'auth_token');
-    if (context.mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
+    await storage.delete(key: 'username');
+    if (mounted) {
+      setState(() => _username = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logged out successfully')),
+      );
+    }
+  }
+
+  void _showAuthModal() async {
+    final result = await AuthModal.showAuthModal(context);
+    if (result != null && mounted) {
+      _loadUsername();
     }
   }
 
@@ -187,112 +202,90 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text("StudiBro Home", style: TextStyle(fontWeight: FontWeight.w600)),
+        title: const Text("StudiBro", style: TextStyle(fontWeight: FontWeight.w600)),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 2,
         centerTitle: false,
         actions: [
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
+          if (_username != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Center(
+                  child: Text(
+                    _username!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
             ),
-            child: IconButton(
-              icon: const Icon(Icons.logout, size: 20),
-              tooltip: "Logout",
-              onPressed: () => _logout(context),
+          if (_username != null)
+            TextButton.icon(
+              onPressed: _logout,
+              icon: const Icon(Icons.logout, color: Colors.white, size: 20),
+              label: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.white),
+              ),
+            )
+          else
+            TextButton.icon(
+              onPressed: _showAuthModal,
+              icon: const Icon(Icons.login, color: Colors.white, size: 20),
+              label: const Text(
+                'Login/Sign Up',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
-          )
+          const SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Section with Logo
-              Center(
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                            Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(
-                        Icons.lightbulb_outline,
-                        size: 60,
-                        color: Color(0xFF673AB7),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "StudiBro",
-                      style: Theme.of(context).textTheme.headlineLarge!.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      "Your AI-Powered Study Assistant",
-                      style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 8),
+            Text(
+              "Welcome to StudiBro",
+              style: Theme.of(context).textTheme.headlineMedium!.copyWith(
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
               ),
-              const SizedBox(height: 40),
-
-              // Content Section
-              Text(
-                "How would you like to input your notes?",
-                style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Choose how you want to study",
+              style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                color: Colors.grey[600],
               ),
-              const SizedBox(height: 16),
-              Text(
-                "Choose between scanning physical documents or pasting digital notes",
-                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Selection Cards
-              _buildSelectionCard(
-                context: context,
-                icon: Icons.camera_alt_rounded,
-                title: "Scan (Image/OCR)",
-                subtitle: "Capture text from physical textbooks and documents.",
-                isImageMode: true,
-              ),
-              const SizedBox(height: 16),
-              _buildSelectionCard(
-                context: context,
-                icon: Icons.keyboard_alt_rounded,
-                title: "Paste (Manual Text)",
-                subtitle: "Paste or type notes from digital sources.",
-                isImageMode: false,
-              ),
-              const SizedBox(height: 40),
-            ],
-          ),
+            ),
+            const SizedBox(height: 32),
+            _buildSelectionCard(
+              context: context,
+              icon: Icons.image,
+              title: "Scan from Image",
+              subtitle: "Take a photo or upload from gallery\nto extract and summarize notes",
+              isImageMode: true,
+            ),
+            const SizedBox(height: 16),
+            _buildSelectionCard(
+              context: context,
+              icon: Icons.edit,
+              title: "Type/Paste Notes",
+              subtitle: "Paste or write your notes directly\nfor instant summarization",
+              isImageMode: false,
+            ),
+          ],
         ),
       ),
     );
