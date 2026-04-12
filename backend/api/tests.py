@@ -6,9 +6,13 @@ class SummaryApiTests(TestCase):
     def setUp(self):
         self.url = reverse('summarize_text') # Ensure this matches your urls.py name
 
+    @patch('api.views.os.getenv')
     @patch('api.views.genai.Client')
-    def test_summarize_success(self, mock_client_class):
+    def test_summarize_success(self, mock_client_class, mock_getenv):
         """Test successful summary generation with mocked Gemini response."""
+        # Mock the environment variable
+        mock_getenv.return_value = "fake-api-key"
+        
         # Setup the mock to return a fake summary
         mock_client = MagicMock()
         mock_response = MagicMock()
