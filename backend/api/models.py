@@ -27,7 +27,6 @@ class Summary(models.Model):
 class Quiz(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='quizzes')
     note = models.ForeignKey(Note, on_delete=models.SET_NULL, null=True, blank=True)
-    title = models.CharField(max_length=255, default="Quiz")
     score = models.IntegerField(default=0)
     total_questions = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -38,16 +37,10 @@ class Quiz(models.Model):
 
 # 4. Question Table - Each question in a quiz
 class Question(models.Model):
-    QUESTION_TYPES = [
-        ('multiple_choice', 'Multiple Choice'),
-        ('true_false', 'True/False'),
-        ('short_answer', 'Short Answer'),
-    ]
-    
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='questions')
     question_text = models.TextField()
-    question_type = models.CharField(max_length=20, choices=QUESTION_TYPES)
-    correct_answer = models.TextField()
+    correct_answer = models.CharField(max_length=255)
+    order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -59,6 +52,7 @@ class QuestionOption(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='options')
     option_text = models.TextField()
     is_correct = models.BooleanField(default=False)
+    order = models.IntegerField(default=0)
 
     def __str__(self):
         return self.option_text
@@ -66,11 +60,11 @@ class QuestionOption(models.Model):
 
 # 6. UserAnswer Table - User's responses to questions
 class UserAnswer(models.Model):
-    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='user_answers')
-    question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    user_response = models.TextField()
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='answers')
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='user_answers')
+    selected_option = models.ForeignKey(QuestionOption, on_delete=models.SET_NULL, null=True, blank=True)
     is_correct = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    answered_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Answer to Q{self.question.id}: {self.user_response[:30]}"
+        return f"Answer to Q{self.question.id} by {self.user.username}"
