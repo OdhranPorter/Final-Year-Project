@@ -1,2 +1,2 @@
-release: python manage.py migrate
+release: bash migrate.sh
 web: gunicorn studibro_project.wsgi
