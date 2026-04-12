@@ -5,6 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'config.dart';
+import 'auth_modal.dart';
 
 class SessionScreen extends StatefulWidget {
   final bool isImageMode;
@@ -17,7 +20,7 @@ class SessionScreen extends StatefulWidget {
 }
 
 class _SessionScreenState extends State<SessionScreen> {
-  final String backendUrl = 'http://192.168.0.8:8000/api/summarize/';
+  final String backendUrl = ApiConfig.summarizeEndpoint;
 
   final TextEditingController _textController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
@@ -27,11 +30,13 @@ class _SessionScreenState extends State<SessionScreen> {
   bool _isExtracting = false;
   File? _selectedImage;
   late TextRecognizer _textRecognizer;
+  String? _username;
 
   @override
   void initState() {
     super.initState();
     _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+    _loadUsername();
     if (widget.isImageMode) {
       // Use addPostFrameCallback instead of Future.delayed for better testability
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -39,6 +44,37 @@ class _SessionScreenState extends State<SessionScreen> {
           _capturePhoto();
         }
       });
+    }
+  }
+
+  Future<void> _loadUsername() async {
+    const storage = FlutterSecureStorage();
+    try {
+      final username = await storage.read(key: 'username');
+      if (mounted && username != null) {
+        setState(() => _username = username);
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+  }
+
+  Future<void> _logout() async {
+    const storage = FlutterSecureStorage();
+    await storage.delete(key: 'auth_token');
+    await storage.delete(key: 'username');
+    if (mounted) {
+      setState(() => _username = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logged out successfully')),
+      );
+    }
+  }
+
+  void _showAuthModal() async {
+    final result = await AuthModal.showAuthModal(context);
+    if (result != null && mounted) {
+      _loadUsername();
     }
   }
 
@@ -219,6 +255,47 @@ class _SessionScreenState extends State<SessionScreen> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 2,
+        actions: [
+          if (_username != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Center(
+                  child: Text(
+                    _username!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (_username != null)
+            TextButton.icon(
+              onPressed: _logout,
+              icon: const Icon(Icons.logout, color: Colors.white, size: 20),
+              label: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.white),
+              ),
+            )
+          else
+            TextButton.icon(
+              onPressed: _showAuthModal,
+              icon: const Icon(Icons.login, color: Colors.white, size: 20),
+              label: const Text(
+                'Login/Sign Up',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [

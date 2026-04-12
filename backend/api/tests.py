@@ -1,16 +1,24 @@
 from django.test import TestCase
 from django.urls import reverse
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 class SummaryApiTests(TestCase):
     def setUp(self):
         self.url = reverse('summarize_text') # Ensure this matches your urls.py name
 
-    @patch('google.generativeai.GenerativeModel.generate_content')
-    def test_summarize_success(self, mock_gemini):
+    @patch('api.views.os.getenv')
+    @patch('api.views.genai.Client')
+    def test_summarize_success(self, mock_client_class, mock_getenv):
         """Test successful summary generation with mocked Gemini response."""
+        # Mock the environment variable
+        mock_getenv.return_value = "fake-api-key"
+        
         # Setup the mock to return a fake summary
-        mock_gemini.return_value.text = "This is a mocked summary of the text."
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "This is a mocked summary of the text."
+        mock_client.models.generate_content.return_value = mock_response
+        mock_client_class.return_value = mock_client
         
         data = {'text': 'This is a long piece of text that needs summarizing.'}
         response = self.client.post(self.url, data, content_type='application/json')

@@ -5,12 +5,13 @@ import 'package:studibro_mobile/login.dart';
 
 void main() {
   group('Navigation Tests', () {
-    // app opens at login screen
+    // app opens at home screen (not login)
     testWidgets('App starts at login', (WidgetTester tester) async {
       await tester.pumpWidget(const StudiBroApp());
       await tester.pumpAndSettle();
 
-      expect(find.byType(LoginScreen), findsOneWidget);
+      // App now starts at HomeScreen, not LoginScreen
+      expect(find.byType(HomeScreen), findsOneWidget);
     });
 
     // user can enter credentials
@@ -30,7 +31,7 @@ void main() {
       expect(find.text('user1'), findsOneWidget);
     });
 
-    // logout button is visible on home
+    // login button appears on home screen when not logged in
     testWidgets('Logout button is visible', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -39,7 +40,8 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(Icons.logout), findsOneWidget);
+      // When not logged in, shows login button instead of logout
+      expect(find.byIcon(Icons.login), findsOneWidget);
     });
   });
 }
