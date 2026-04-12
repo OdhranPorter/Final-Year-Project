@@ -54,8 +54,13 @@ class _AuthModalContentState extends State<_AuthModalContent> {
     setState(() => _isLoading = true);
 
     try {
+      // Use different endpoints for signup vs login
+      String endpoint = _isLoginMode 
+          ? ApiConfig.loginEndpoint  // POST to /api/token/
+          : '${ApiConfig.baseUrl}/register/';  // POST to /api/register/
+      
       final response = await http.post(
-        Uri.parse(ApiConfig.loginEndpoint),
+        Uri.parse(endpoint),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           'username': _usernameController.text,
@@ -63,14 +68,18 @@ class _AuthModalContentState extends State<_AuthModalContent> {
         }),
       ).timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         const storage = FlutterSecureStorage();
-        final token = response.body;
-        await storage.write(key: 'auth_token', value: token);
+        
+        // Parse JWT response
+        final jsonResponse = jsonDecode(response.body);
+        final accessToken = jsonResponse['access'];
+        
+        await storage.write(key: 'auth_token', value: accessToken);
         await storage.write(key: 'username', value: _usernameController.text);
         
         if (mounted) {
-          Navigator.pop(context, token);
+          Navigator.pop(context, accessToken);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(_isLoginMode ? 'Login successful!' : 'Account created and logged in!'),
@@ -79,11 +88,14 @@ class _AuthModalContentState extends State<_AuthModalContent> {
           );
         }
       } else {
+        final errorResponse = jsonDecode(response.body);
+        final errorMessage = errorResponse['error'] ?? 'Unknown error';
+        
         _showErrorDialog(
           'Authentication Failed',
           _isLoginMode 
             ? 'Invalid username or password'
-            : 'Unable to create account. Username may already exist.',
+            : errorMessage,
         );
       }
     } catch (e) {
