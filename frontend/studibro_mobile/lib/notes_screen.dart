@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import 'config.dart';
+import 'quiz_screen.dart';
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -357,6 +358,30 @@ class _NotesScreenState extends State<NotesScreen> {
                                         ),
                                       ),
                                   ],
+                                ),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => QuizScreen(
+                                            title: 'Quiz',
+                                            notes: note['summary'] ?? note['original_text'] ?? '',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.quiz),
+                                    label: const Text('Create Quiz'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),

@@ -30,6 +30,7 @@ class Quiz(models.Model):
     title = models.CharField(max_length=255, default="Quiz")
     score = models.IntegerField(default=0)
     total_questions = models.IntegerField(default=0)
+    original_text = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

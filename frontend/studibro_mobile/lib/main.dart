@@ -4,6 +4,7 @@ import 'login.dart';
 import 'session_screen.dart';
 import 'scan_options_screen.dart';
 import 'notes_screen.dart';
+import 'quizzes_history_screen.dart';
 import 'auth_modal.dart';
 
 void main() async {
@@ -122,10 +123,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               );
             } else if (title == "View Quizzes") {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("📚 Quiz feature coming soon!"),
-                  backgroundColor: Colors.purple,
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const QuizzesHistoryScreen(),
                 ),
               );
             }

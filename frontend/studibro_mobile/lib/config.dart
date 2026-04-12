@@ -8,6 +8,9 @@ class ApiConfig {
   static const String loginEndpoint = '$baseUrl/token/';
   static const String notesEndpoint = '$baseUrl/notes/';
   static const String saveSummaryEndpoint = '$baseUrl/notes/save/';
+  static const String generateQuizEndpoint = '$baseUrl/generate-quiz/';
+  static const String saveQuizEndpoint = '$baseUrl/quizzes/';
+  static const String quizzesHistoryEndpoint = '$baseUrl/quizzes-history/';
   static const String quizEndpoint = '$baseUrl/quiz/';
   static const String answerEndpoint = '$baseUrl/answer/';
   static const String historyEndpoint = '$baseUrl/history/';
