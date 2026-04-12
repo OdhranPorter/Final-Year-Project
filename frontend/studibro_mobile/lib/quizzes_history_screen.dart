@@ -17,11 +17,45 @@ class _QuizzesHistoryScreenState extends State<QuizzesHistoryScreen> {
   bool _isLoading = true;
   List<dynamic> _quizzes = [];
   String _errorMessage = '';
+  
+  // Filter state
+  List<String> _availableClasses = [];
+  List<String> _availableYears = [];
+  String? _selectedClass;
+  String? _selectedYear;
 
   @override
   void initState() {
     super.initState();
+    _fetchFilterOptions();
     _fetchQuizHistory();
+  }
+
+  Future<void> _fetchFilterOptions() async {
+    try {
+      final token = await _secureStorage.read(key: 'auth_token');
+      if (token == null) return;
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.quizFiltersEndpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (mounted) {
+          setState(() {
+            _availableClasses = List<String>.from(data['classes'] ?? []);
+            _availableYears = List<String>.from(data['years'] ?? []);
+          });
+        }
+      }
+    } catch (e) {
+      // Silently ignore errors in fetching filters
+    }
   }
 
   Future<void> _fetchQuizHistory() async {
@@ -36,8 +70,21 @@ class _QuizzesHistoryScreenState extends State<QuizzesHistoryScreen> {
         return;
       }
 
+      // Build query parameters based on filters
+      var queryParams = <String, String>{};
+      if (_selectedClass != null && _selectedClass!.isNotEmpty) {
+        queryParams['subject_class'] = _selectedClass!;
+      }
+      if (_selectedYear != null && _selectedYear!.isNotEmpty) {
+        queryParams['year'] = _selectedYear!;
+      }
+
+      final uri = Uri.parse(ApiConfig.quizzesHistoryEndpoint).replace(
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+
       final response = await http.get(
-        Uri.parse(ApiConfig.quizzesHistoryEndpoint),
+        uri,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -81,126 +128,203 @@ class _QuizzesHistoryScreenState extends State<QuizzesHistoryScreen> {
         foregroundColor: Colors.white,
         elevation: 4,
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : _errorMessage.isNotEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+      body: Column(
+        children: [
+          // Filter section
+          if (_availableClasses.isNotEmpty || _availableYears.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.white,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Filter Quizzes',
+                    style: Theme.of(context).textTheme.titleSmall!.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
                     children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 48,
-                        color: Colors.red[300],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _errorMessage,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
+                      // Class filter
+                      if (_availableClasses.isNotEmpty)
+                        Expanded(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _selectedClass,
+                            hint: Text('By Class', style: TextStyle(color: Colors.grey[600])),
+                            items: [
+                              DropdownMenuItem<String>(
+                                value: null,
+                                child: const Text('All Classes'),
+                              ),
+                              ..._availableClasses
+                                  .map((c) => DropdownMenuItem<String>(
+                                    value: c,
+                                    child: Text(c),
+                                  ))
+                                  .toList(),
+                            ],
+                            onChanged: (value) {
+                              setState(() => _selectedClass = value);
+                              _fetchQuizHistory();
+                            },
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _isLoading = true;
-                            _errorMessage = '';
-                          });
-                          _fetchQuizHistory();
-                        },
-                        child: const Text('Retry'),
-                      ),
+                      const SizedBox(width: 12),
+                      // Year filter
+                      if (_availableYears.isNotEmpty)
+                        Expanded(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _selectedYear,
+                            hint: Text('By Year', style: TextStyle(color: Colors.grey[600])),
+                            items: [
+                              DropdownMenuItem<String>(
+                                value: null,
+                                child: const Text('All Years'),
+                              ),
+                              ..._availableYears
+                                  .map((y) => DropdownMenuItem<String>(
+                                    value: y,
+                                    child: Text(y),
+                                  ))
+                                  .toList(),
+                            ],
+                            onChanged: (value) {
+                              setState(() => _selectedYear = value);
+                              _fetchQuizHistory();
+                            },
+                          ),
+                        ),
                     ],
                   ),
-                )
-              : _quizzes.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.quiz_outlined,
-                            size: 48,
-                            color: Colors.grey[300],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No quizzes completed yet',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[600],
+                ],
+              ),
+            ),
+          // Quizzes list
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : _errorMessage.isNotEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 48,
+                              color: Colors.red[300],
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Take a quiz to see your history',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[500],
+                            const SizedBox(height: 16),
+                            Text(
+                              _errorMessage,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 24),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            icon: const Icon(Icons.arrow_back),
-                            label: const Text('Go Back'),
-                          ),
-                        ],
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _fetchQuizHistory,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _quizzes.length,
-                        itemBuilder: (context, index) {
-                          final quiz = _quizzes[index];
-                          final percentage = quiz['percentage'] ?? 0;
-                          final score = quiz['score'] ?? 0;
-                          final totalQuestions = quiz['total_questions'] ?? 0;
-                          final createdAt = quiz['created_at'] ?? '';
-                          
-                          // Determine color based on performance
-                          Color performanceColor = Colors.red;
-                          String performanceMessage = 'Needs Improvement';
-                          if (percentage >= 80) {
-                            performanceColor = Colors.green;
-                            performanceMessage = 'Excellent!';
-                          } else if (percentage >= 60) {
-                            performanceColor = Colors.orange;
-                            performanceMessage = 'Good Job!';
-                          }
-                          
-                          // Format date
-                          String formattedDate = 'Unknown Date';
-                          try {
-                            final dateTime = DateTime.parse(createdAt);
-                            formattedDate =
-                                '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
-                          } catch (e) {
-                            // Keep default
-                          }
-
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            elevation: 2,
-                            child: InkWell(
-                              onTap: () {
-                                _showQuizDetails(context, quiz);
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _isLoading = true;
+                                  _errorMessage = '';
+                                });
+                                _fetchQuizHistory();
                               },
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _quizzes.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.quiz_outlined,
+                                  size: 48,
+                                  color: Colors.grey[300],
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No quizzes completed yet',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Take a quiz to see your history',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
+                                  icon: const Icon(Icons.arrow_back),
+                                  label: const Text('Go Back'),
+                                ),
+                              ],
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: _fetchQuizHistory,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _quizzes.length,
+                              itemBuilder: (context, index) {
+                                final quiz = _quizzes[index];
+                                final percentage = quiz['percentage'] ?? 0;
+                                final score = quiz['score'] ?? 0;
+                                final totalQuestions = quiz['total_questions'] ?? 0;
+                                final createdAt = quiz['created_at'] ?? '';
+                                
+                                // Determine color based on performance
+                                Color performanceColor = Colors.red;
+                                String performanceMessage = 'Needs Improvement';
+                                if (percentage >= 80) {
+                                  performanceColor = Colors.green;
+                                  performanceMessage = 'Excellent!';
+                                } else if (percentage >= 60) {
+                                  performanceColor = Colors.orange;
+                                  performanceMessage = 'Good Job!';
+                                }
+                                
+                                // Format date
+                                String formattedDate = 'Unknown Date';
+                                try {
+                                  final dateTime = DateTime.parse(createdAt);
+                                  formattedDate =
+                                      '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+                                } catch (e) {
+                                  // Keep default
+                                }
+
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  elevation: 2,
+                                  child: InkWell(
+                                    onTap: () {
+                                      _showQuizDetails(context, quiz);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: [
@@ -217,6 +341,31 @@ class _QuizzesHistoryScreenState extends State<QuizzesHistoryScreen> {
                                                 ),
                                               ),
                                               const SizedBox(height: 4),
+                                              // Display class and year if available
+                                              if (quiz['subject_class'] != null && quiz['subject_class']!.isNotEmpty)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(bottom: 2),
+                                                  child: Text(
+                                                    'Class: ${quiz['subject_class']}',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.blue[600],
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ),
+                                              if (quiz['year'] != null && quiz['year']!.isNotEmpty)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(bottom: 4),
+                                                  child: Text(
+                                                    'Year: ${quiz['year']}',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.purple[600],
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ),
                                               Text(
                                                 formattedDate,
                                                 style: TextStyle(
@@ -293,6 +442,9 @@ class _QuizzesHistoryScreenState extends State<QuizzesHistoryScreen> {
                         },
                       ),
                     ),
+            ),
+          ],
+        ),
     );
   }
 
@@ -490,6 +642,8 @@ class _QuizzesHistoryScreenState extends State<QuizzesHistoryScreen> {
                           Navigator.pop(context);
                           final originalText = quiz['original_text'] ?? '';
                           final quizQuestions = quiz['questions'] as List<dynamic>? ?? [];
+                          final subjectClass = quiz['subject_class'] ?? '';
+                          final year = quiz['year'] ?? '';
                           if (quizQuestions.isNotEmpty) {
                             Navigator.push(
                               context,
@@ -498,6 +652,8 @@ class _QuizzesHistoryScreenState extends State<QuizzesHistoryScreen> {
                                   title: 'Retake Quiz',
                                   notes: originalText,
                                   existingQuestions: List<Map<String, dynamic>>.from(quizQuestions),
+                                  subjectClass: subjectClass,
+                                  year: year,
                                 ),
                               ),
                             );

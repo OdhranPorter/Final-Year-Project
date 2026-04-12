@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'config.dart';
@@ -30,6 +29,8 @@ class _SessionScreenState extends State<SessionScreen> {
   final String backendUrl = ApiConfig.summarizeEndpoint;
 
   final TextEditingController _textController = TextEditingController();
+  final TextEditingController _classController = TextEditingController();
+  final TextEditingController _yearController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
   
   String _summary = "";
@@ -324,11 +325,16 @@ class _SessionScreenState extends State<SessionScreen> {
         body: jsonEncode({
           "original_text": _textController.text,
           "summary_text": _summary,
+          "subject_class": _classController.text,
+          "year": _yearController.text,
         }),
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 201) {
         _showInfoSnackbar('Success', '✅ Summary saved successfully!');
+        // Clear the form after saving
+        _classController.clear();
+        _yearController.clear();
       } else {
         _showErrorSnackbar('Error', 'Failed to save summary (Code: ${response.statusCode})');
       }
@@ -579,89 +585,135 @@ class _SessionScreenState extends State<SessionScreen> {
                     ),
                     const Divider(height: 16),
                     Expanded(
-                      child: _summary.isEmpty && !_isLoading
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.note_alt_outlined,
-                                    size: 48,
-                                    color: Colors.grey[300],
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _summary.isEmpty && !_isLoading
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.note_alt_outlined,
+                                          size: 48,
+                                          color: Colors.grey[300],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          "Results will appear here",
+                                          style: TextStyle(
+                                            color: Colors.grey[500],
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : SingleChildScrollView(
+                                    child: Text(
+                                      _summary,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        height: 1.6,
+                                        color: Colors.grey[800],
+                                      ),
+                                    ),
                                   ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    "Results will appear here",
-                                    style: TextStyle(
-                                      color: Colors.grey[500],
-                                      fontSize: 14,
+                            const SizedBox(height: 12),
+                            // Class and Year input fields - shown when there's a summary
+                            if (_summary.isNotEmpty && !_isLoading && !_summary.startsWith('ERROR') && !_summary.startsWith('⚠️'))
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Column(
+                                  children: [
+                                    TextField(
+                                      controller: _classController,
+                                      decoration: InputDecoration(
+                                        labelText: 'Class/Subject (optional)',
+                                        hintText: 'e.g., Physics 101, Biology A',
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        prefixIcon: const Icon(Icons.school),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    TextField(
+                                      controller: _yearController,
+                                      decoration: InputDecoration(
+                                        labelText: 'Year (optional)',
+                                        hintText: 'e.g., 2024, 2025',
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        prefixIcon: const Icon(Icons.calendar_today),
+                                      ),
+                                      keyboardType: TextInputType.number,
+                                      maxLength: 4,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            // Save button - only show if there's a summary
+                            if (_summary.isNotEmpty && !_isLoading && !_summary.startsWith('ERROR') && !_summary.startsWith('⚠️'))
+                              Column(
+                                children: [
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      onPressed: _saveSummary,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                      ),
+                                      icon: const Icon(Icons.save, color: Colors.white),
+                                      label: const Text(
+                                        'Save This Summary',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => QuizScreen(
+                                              title: 'Quiz',
+                                              notes: _summary,
+                                              subjectClass: _classController.text,
+                                              year: _yearController.text,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.blue,
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                      ),
+                                      icon: const Icon(Icons.quiz, color: Colors.white),
+                                      label: const Text(
+                                        'Start Quiz',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                            )
-                          : SingleChildScrollView(
-                              child: Text(
-                                _summary,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  height: 1.6,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                            ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Save button - only show if there's a summary
-                    if (_summary.isNotEmpty && !_isLoading && !_summary.startsWith('ERROR') && !_summary.startsWith('⚠️'))
-                      Column(
-                        children: [
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _saveSummary,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                              ),
-                              icon: const Icon(Icons.save, color: Colors.white),
-                              label: const Text(
-                                'Save This Summary',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => QuizScreen(title: 'Quiz', notes: _summary),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                              ),
-                              icon: const Icon(Icons.quiz, color: Colors.white),
-                              label: const Text(
-                                'Start Quiz',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -675,6 +727,8 @@ class _SessionScreenState extends State<SessionScreen> {
   @override
   void dispose() {
     _textController.dispose();
+    _classController.dispose();
+    _yearController.dispose();
     _textRecognizer.close();
     super.dispose();
   }

@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'session_screen.dart';
-import 'auth_modal.dart';
 
 class ScanOptionsScreen extends StatefulWidget {
   const ScanOptionsScreen({super.key});

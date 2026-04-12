@@ -62,16 +62,15 @@ def summarize_text(request):
         if not api_key:
             return Response({"error": "GEMINI_API_KEY not configured"}, status=500)
         
-        client = genai.Client(api_key=api_key)
+        import google.generativeai
+        google.generativeai.configure(api_key=api_key)
         
         # 3. Create a prompt
         prompt = f"Summarize the following study notes into 3 concise bullet points:\n\n{user_text}"
 
         # 4. Generate Content using the Gemini 2.5 Flash model
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt
-        )
+        model = google.generativeai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(prompt)
         
         # 5. Return the result as JSON
         return Response({
@@ -80,7 +79,8 @@ def summarize_text(request):
         })
 
     except Exception as e:
-        return Response({"error": str(e)}, status=500)
+        import traceback
+        return Response({"error": f"{str(e)}\n{traceback.format_exc()}"}, status=500)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -88,6 +88,8 @@ def save_summary(request):
     """Save a summary to the user's account"""
     original_text = request.data.get('original_text')
     summary_text = request.data.get('summary_text')
+    subject_class = request.data.get('subject_class', '')
+    year = request.data.get('year', '')
     
     if not original_text or not summary_text:
         return Response({"error": "Both original_text and summary_text are required"}, status=400)
@@ -96,7 +98,9 @@ def save_summary(request):
         summary = Summary.objects.create(
             user=request.user,
             original_text=original_text,
-            summary_text=summary_text
+            summary_text=summary_text,
+            subject_class=subject_class,
+            year=year
         )
         
         return Response({
@@ -111,20 +115,57 @@ def save_summary(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_summaries(request):
-    """Get all summaries for the logged-in user"""
+    """Get all summaries for the logged-in user with optional filtering"""
     try:
+        # Get filter parameters from query string
+        subject_class_filter = request.query_params.get('subject_class', None)
+        year_filter = request.query_params.get('year', None)
+        
+        # Start with all user's summaries
         summaries = Summary.objects.filter(user=request.user).order_by('-created_at')
+        
+        # Apply filters if provided
+        if subject_class_filter:
+            summaries = summaries.filter(subject_class=subject_class_filter)
+        if year_filter:
+            summaries = summaries.filter(year=year_filter)
         
         data = [{
             "id": summary.id,
             "original_text": summary.original_text[:200] + "..." if len(summary.original_text) > 200 else summary.original_text,
             "summary_text": summary.summary_text,
+            "subject_class": summary.subject_class,
+            "year": summary.year,
             "created_at": summary.created_at
         } for summary in summaries]
         
         return Response({
             "count": len(data),
             "summaries": data
+        }, status=200)
+    
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_filter_options(request):
+    """Get available filter options (classes and years) for the user's summaries"""
+    try:
+        user_summaries = Summary.objects.filter(user=request.user)
+        
+        # Get unique subject_class and year values
+        classes = user_summaries.values_list('subject_class', flat=True).distinct()
+        years = user_summaries.values_list('year', flat=True).distinct()
+        
+        # Filter out empty strings and sort
+        classes = sorted([c for c in classes if c])
+        years = sorted([y for y in years if y])
+        
+        return Response({
+            "classes": classes,
+            "years": years
         }, status=200)
     
     except Exception as e:
@@ -161,13 +202,9 @@ def generate_quiz(request):
         if not api_key:
             return Response({"error": "GEMINI_API_KEY not configured"}, status=500)
         
-        try:
-            client = genai.Client(api_key=api_key)
-        except Exception as e:
-            # Try alternative initialization method
-            import google.generativeai
-            google.generativeai.configure(api_key=api_key)
-            client = genai
+        # Use google.generativeai for quiz generation
+        import google.generativeai
+        google.generativeai.configure(api_key=api_key)
         
         # Prompt to generate multiple-choice questions
         prompt = f"""Generate exactly 5 multiple-choice quiz questions based on these study notes. 
@@ -185,16 +222,8 @@ Return ONLY valid JSON with this structure (no other text):
 Study notes:
 {text}"""
 
-        try:
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt
-            )
-        except Exception as e:
-            # Try alternative method
-            import google.generativeai
-            model = google.generativeai.GenerativeModel('gemini-2.5-flash')
-            response = model.generate_content(prompt)
+        model = google.generativeai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(prompt)
         
         # Extract JSON from response
         response_text = response.text.strip()
@@ -226,17 +255,21 @@ def save_quiz_results(request):
     total_questions = request.data.get('total_questions')
     questions_data = request.data.get('questions')  # Array of questions with user responses
     original_text = request.data.get('original_text', '')  # Original text used to generate quiz
+    subject_class = request.data.get('subject_class', '')  # Class/subject for the quiz
+    year = request.data.get('year', '')  # Year for the quiz
     
     if score is None or total_questions is None or not questions_data:
         return Response({"error": "score, total_questions, and questions are required"}, status=400)
     
     try:
-        # Create quiz record with original_text
+        # Create quiz record with original_text, class, and year
         quiz = Quiz.objects.create(
             user=request.user,
             score=score,
             total_questions=total_questions,
-            original_text=original_text
+            original_text=original_text,
+            subject_class=subject_class,
+            year=year
         )
         
         # Create questions and store user answers
@@ -273,9 +306,20 @@ def save_quiz_results(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_quizzes(request):
-    """Get all completed quizzes for the authenticated user"""
+    """Get all completed quizzes for the authenticated user with optional filtering"""
     try:
+        # Get filter parameters from query string
+        subject_class_filter = request.query_params.get('subject_class', None)
+        year_filter = request.query_params.get('year', None)
+        
+        # Start with all user's quizzes
         quizzes = Quiz.objects.filter(user=request.user).order_by('-created_at')
+        
+        # Apply filters if provided
+        if subject_class_filter:
+            quizzes = quizzes.filter(subject_class=subject_class_filter)
+        if year_filter:
+            quizzes = quizzes.filter(year=year_filter)
         
         quiz_list = []
         for quiz in quizzes:
@@ -310,11 +354,37 @@ def get_user_quizzes(request):
                 'percentage': round(percentage, 1),
                 'created_at': quiz.created_at.isoformat(),
                 'original_text': quiz.original_text,
+                'subject_class': quiz.subject_class,
+                'year': quiz.year,
                 'questions': questions_data
             })
         
         return Response({
             "quizzes": quiz_list
+        }, status=200)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_quiz_filter_options(request):
+    """Get available filter options (classes and years) for the user's quizzes"""
+    try:
+        user_quizzes = Quiz.objects.filter(user=request.user)
+        
+        # Get unique subject_class and year values
+        classes = user_quizzes.values_list('subject_class', flat=True).distinct()
+        years = user_quizzes.values_list('year', flat=True).distinct()
+        
+        # Filter out empty strings and sort
+        classes = sorted([c for c in classes if c])
+        years = sorted([y for y in years if y])
+        
+        return Response({
+            "classes": classes,
+            "years": years
         }, status=200)
     
     except Exception as e:

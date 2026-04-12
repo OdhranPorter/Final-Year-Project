@@ -6,6 +6,8 @@ class Note(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notes')
     title = models.CharField(max_length=255)
     content = models.TextField()
+    subject_class = models.CharField(max_length=255, blank=True, default="")  # e.g., "Physics 101", "Biology A"
+    year = models.CharField(max_length=4, blank=True, default="")  # e.g., "2024", "2025"
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -18,6 +20,8 @@ class Summary(models.Model):
     note = models.OneToOneField(Note, on_delete=models.CASCADE, related_name='summary', null=True, blank=True)
     original_text = models.TextField()
     summary_text = models.TextField()
+    subject_class = models.CharField(max_length=255, blank=True, default="")  # e.g., "Physics 101", "Biology A"
+    year = models.CharField(max_length=4, blank=True, default="")  # e.g., "2024", "2025"
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -31,6 +35,8 @@ class Quiz(models.Model):
     score = models.IntegerField(default=0)
     total_questions = models.IntegerField(default=0)
     original_text = models.TextField(blank=True, default="")
+    subject_class = models.CharField(max_length=255, blank=True, default="")  # e.g., "Physics 101"
+    year = models.CharField(max_length=4, blank=True, default="")  # e.g., "2024"
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
