@@ -58,6 +58,58 @@ class _QuizzesHistoryScreenState extends State<QuizzesHistoryScreen> {
     }
   }
 
+  Future<void> _deleteQuiz(int quizId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Quiz?"),
+        content: const Text("This action cannot be undone."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final token = await _secureStorage.read(key: 'auth_token');
+      if (token == null) return;
+
+      final response = await http.delete(
+        Uri.parse('${ApiConfig.quizzesHistoryEndpoint}$quizId/delete/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        _fetchQuizHistory();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Quiz deleted"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: ${e.toString()}")),
+        );
+      }
+    }
+  }
+
   Future<void> _fetchQuizHistory() async {
     try {
       final token = await _secureStorage.read(key: 'auth_token');
@@ -164,7 +216,7 @@ class _QuizzesHistoryScreenState extends State<QuizzesHistoryScreen> {
                                     value: c,
                                     child: Text(c),
                                   ))
-                                  .toList(),
+                                  ,
                             ],
                             onChanged: (value) {
                               setState(() => _selectedClass = value);
@@ -190,7 +242,7 @@ class _QuizzesHistoryScreenState extends State<QuizzesHistoryScreen> {
                                     value: y,
                                     child: Text(y),
                                   ))
-                                  .toList(),
+                                  ,
                             ],
                             onChanged: (value) {
                               setState(() => _selectedYear = value);
@@ -425,8 +477,23 @@ class _QuizzesHistoryScreenState extends State<QuizzesHistoryScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
+                                        ElevatedButton.icon(
+                                          onPressed: () =>
+                                              _deleteQuiz(quiz['id']),
+                                          icon: const Icon(Icons.delete_outline,
+                                              size: 16),
+                                          label: const Text('Delete'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red[100],
+                                            foregroundColor: Colors.red,
+                                            padding:
+                                                const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 8),
+                                          ),
+                                        ),
                                         Icon(
                                           Icons.arrow_forward,
                                           size: 16,

@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import 'config.dart';
 import 'quiz_screen.dart';
+import 'flashcard_screen.dart';
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -388,7 +389,7 @@ class _NotesScreenState extends State<NotesScreen> {
                                           value: c,
                                           child: Text(c),
                                         ))
-                                        .toList(),
+                                        ,
                                   ],
                                   onChanged: (value) {
                                     setState(() => _selectedClass = value);
@@ -414,7 +415,7 @@ class _NotesScreenState extends State<NotesScreen> {
                                           value: y,
                                           child: Text(y),
                                         ))
-                                        .toList(),
+                                        ,
                                   ],
                                   onChanged: (value) {
                                     setState(() => _selectedYear = value);
@@ -538,30 +539,58 @@ class _NotesScreenState extends State<NotesScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => QuizScreen(
-                                            title: 'Quiz',
-                                            notes: note['summary'] ?? note['original_text'] ?? '',
-                                            subjectClass: note['subject_class'],
-                                            year: note['year'],
-                                          ),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => QuizScreen(
+                                                title: 'Quiz',
+                                                notes: note['summary'] ?? note['original_text'] ?? '',
+                                                subjectClass: note['subject_class'],
+                                                year: note['year'],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(Icons.quiz),
+                                        label: const Text('Quiz'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.blue,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(vertical: 8),
                                         ),
-                                      );
-                                    },
-                                    icon: const Icon(Icons.quiz),
-                                    label: const Text('Create Quiz'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => FlashcardScreen(
+                                                title: 'Flashcards',
+                                                notes: note['summary'] ?? note['original_text'] ?? '',
+                                                subjectClass: note['subject_class'],
+                                                year: note['year'],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(Icons.library_books),
+                                        label: const Text('Flashcards'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.purple,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),

@@ -9,7 +9,7 @@ import os
 from dotenv import load_dotenv
 import json
 import re
-from .models import Summary, Quiz, Question, QuestionOption
+from .models import Summary, Quiz, Question, QuestionOption, UserAnswer, Flashcard, FlashcardCard
 
 # Load the API key from the .env file
 load_dotenv()
@@ -67,8 +67,8 @@ def summarize_text(request):
         # 3. Create a prompt
         prompt = f"Summarize the following study notes into 3 concise bullet points:\n\n{user_text}"
 
-        # 4. Generate Content using the Gemini 2.5 Flash model
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        # 4. Generate Content using the Gemini 2.5 Flash Lite model
+        response = client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
         
         # 5. Return the result as JSON
         return Response({
@@ -219,7 +219,7 @@ Return ONLY valid JSON with this structure (no other text):
 Study notes:
 {text}"""
 
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        response = client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
         
         # Extract JSON from response
         response_text = response.text.strip()
@@ -363,6 +363,25 @@ def get_user_quizzes(request):
         return Response({"error": str(e)}, status=500)
 
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_quiz(request, quiz_id):
+    """Delete a quiz (only if it belongs to the user)"""
+    
+    try:
+        quiz = Quiz.objects.get(id=quiz_id, user=request.user)
+        quiz.delete()
+        
+        return Response({
+            "message": "Quiz deleted successfully"
+        }, status=200)
+    
+    except Quiz.DoesNotExist:
+        return Response({"error": "Quiz not found or unauthorized"}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_quiz_filter_options(request):
@@ -383,5 +402,199 @@ def get_quiz_filter_options(request):
             "years": years
         }, status=200)
     
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def generate_flashcards(request):
+    """Generate flashcards from user notes using Gemini AI"""
+    
+    text = request.data.get('text')
+    title = request.data.get('title', 'Flashcard Set')
+    subject_class = request.data.get('subject_class', '')
+    year = request.data.get('year', '')
+    
+    if not text or len(text.strip()) == 0:
+        return Response({"error": "Text is required to generate flashcards"}, status=400)
+    
+    try:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            return Response({"error": "GEMINI_API_KEY not configured"}, status=500)
+        
+        client = google.genai.Client(api_key=api_key)
+        
+        # Prompt to generate flashcard Q&A pairs
+        prompt = f"""Generate exactly 10 flashcard question-answer pairs based on these study notes.
+Return ONLY valid JSON with this structure (no other text):
+{{
+  "cards": [
+    {{
+      "question": "Question or term here?",
+      "answer": "Answer or definition here."
+    }}
+  ]
+}}
+
+Study notes:
+{text}"""
+
+        response = client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
+        
+        # Extract JSON from response
+        response_text = response.text.strip()
+        
+        # Try to find JSON in the response
+        json_match = re.search(r'\{[\s\S]*\}', response_text)
+        if json_match:
+            response_text = json_match.group()
+        
+        flashcard_data = json.loads(response_text)
+        
+        return Response({
+            "cards": flashcard_data.get('cards', []),
+            "total_cards": len(flashcard_data.get('cards', []))
+        }, status=200)
+    
+    except json.JSONDecodeError as e:
+        return Response({"error": f"Failed to parse AI response: {str(e)}"}, status=500)
+    except Exception as e:
+        import traceback
+        error_msg = f"{str(e)}\n{traceback.format_exc()}"
+        return Response({"error": error_msg}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_flashcards(request):
+    """Save generated flashcards to user's account"""
+    
+    title = request.data.get('title', 'Flashcard Set')
+    cards_data = request.data.get('cards')
+    original_text = request.data.get('original_text', '')
+    subject_class = request.data.get('subject_class', '')
+    year = request.data.get('year', '')
+    
+    if not cards_data or len(cards_data) == 0:
+        return Response({"error": "At least one card is required"}, status=400)
+    
+    try:
+        # Create flashcard set
+        flashcard = Flashcard.objects.create(
+            user=request.user,
+            title=title,
+            original_text=original_text,
+            subject_class=subject_class,
+            year=year
+        )
+        
+        # Create individual cards
+        for card_data in cards_data:
+            FlashcardCard.objects.create(
+                flashcard=flashcard,
+                question=card_data.get('question', ''),
+                answer=card_data.get('answer', '')
+            )
+        
+        return Response({
+            "message": "Flashcards saved successfully",
+            "flashcard_id": flashcard.id,
+            "total_cards": len(cards_data)
+        }, status=201)
+    
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_flashcards(request):
+    """Get all flashcard sets for the authenticated user with optional filtering"""
+    
+    try:
+        # Get filter parameters from query string
+        subject_class_filter = request.query_params.get('subject_class', None)
+        year_filter = request.query_params.get('year', None)
+        
+        # Start with all user's flashcards
+        flashcards = Flashcard.objects.filter(user=request.user).order_by('-created_at')
+        
+        # Apply filters if provided
+        if subject_class_filter:
+            flashcards = flashcards.filter(subject_class=subject_class_filter)
+        if year_filter:
+            flashcards = flashcards.filter(year=year_filter)
+        
+        flashcard_list = []
+        for flashcard in flashcards:
+            cards = FlashcardCard.objects.filter(flashcard=flashcard)
+            cards_data = [
+                {
+                    'question': card.question,
+                    'answer': card.answer
+                }
+                for card in cards
+            ]
+            
+            flashcard_list.append({
+                'id': flashcard.id,
+                'title': flashcard.title,
+                'total_cards': len(cards_data),
+                'created_at': flashcard.created_at.isoformat(),
+                'subject_class': flashcard.subject_class,
+                'year': flashcard.year,
+                'cards': cards_data
+            })
+        
+        return Response({
+            "flashcards": flashcard_list
+        }, status=200)
+    
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_flashcard_filter_options(request):
+    """Get available filter options (classes and years) for the user's flashcards"""
+    
+    try:
+        user_flashcards = Flashcard.objects.filter(user=request.user)
+        
+        # Get unique subject_class and year values
+        classes = user_flashcards.values_list('subject_class', flat=True).distinct()
+        years = user_flashcards.values_list('year', flat=True).distinct()
+        
+        # Filter out empty strings and sort
+        classes = sorted([c for c in classes if c])
+        years = sorted([y for y in years if y])
+        
+        return Response({
+            "classes": classes,
+            "years": years
+        }, status=200)
+    
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_flashcards(request, flashcard_id):
+    """Delete a flashcard set (only if it belongs to the user)"""
+    
+    try:
+        flashcard = Flashcard.objects.get(id=flashcard_id, user=request.user)
+        flashcard.delete()
+        
+        return Response({
+            "message": "Flashcard set deleted successfully"
+        }, status=200)
+    
+    except Flashcard.DoesNotExist:
+        return Response({"error": "Flashcard set not found or unauthorized"}, status=404)
     except Exception as e:
         return Response({"error": str(e)}, status=500)
