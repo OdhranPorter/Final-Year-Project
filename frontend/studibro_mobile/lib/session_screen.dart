@@ -12,8 +12,14 @@ import 'auth_modal.dart';
 class SessionScreen extends StatefulWidget {
   final bool isImageMode;
   final String title;
+  final String initialText;
 
-  const SessionScreen({super.key, required this.isImageMode, required this.title});
+  const SessionScreen({
+    super.key,
+    required this.isImageMode,
+    required this.title,
+    this.initialText = '',
+  });
 
   @override
   State<SessionScreen> createState() => _SessionScreenState();
@@ -37,7 +43,11 @@ class _SessionScreenState extends State<SessionScreen> {
     super.initState();
     _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
     _loadUsername();
-    if (widget.isImageMode) {
+    
+    // If initialText is provided, populate the text controller
+    if (widget.initialText.isNotEmpty) {
+      _textController.text = widget.initialText;
+    } else if (widget.isImageMode) {
       // Use addPostFrameCallback instead of Future.delayed for better testability
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -51,8 +61,16 @@ class _SessionScreenState extends State<SessionScreen> {
     const storage = FlutterSecureStorage();
     try {
       final username = await storage.read(key: 'username');
-      if (mounted && username != null) {
-        setState(() => _username = username);
+      if (mounted) {
+        if (username == null) {
+          // Not logged in, redirect to home
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please sign in to access this feature')),
+          );
+        } else {
+          setState(() => _username = username);
+        }
       }
     } catch (e) {
       // Ignore errors
@@ -220,16 +238,30 @@ class _SessionScreenState extends State<SessionScreen> {
     });
 
     try {
+      // Get the auth token from secure storage
+      const storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'auth_token');
+
+      if (token == null) {
+        setState(() {
+          _summary = "ERROR: Not authenticated. Please log in again.";
+        });
+        return;
+      }
+
       final response = await http.post(
         Uri.parse(backendUrl),
-        headers: {"Content-Type": "application/json"},
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
         body: jsonEncode({"text": _textController.text}),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          _summary = data['summary'];
+          _summary = data['summary'] ?? "No summary generated";
         });
       } else {
         setState(() {

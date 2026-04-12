@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'login.dart';
 import 'session_screen.dart';
+import 'scan_options_screen.dart';
 import 'auth_modal.dart';
 
 void main() async {
@@ -101,41 +102,54 @@ class _HomeScreenState extends State<HomeScreen> {
     return Material(
       child: InkWell(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SessionScreen(isImageMode: isImageMode, title: title),
-            ),
-          );
+          if (_username == null) {
+            _showAuthModal();
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ScanOptionsScreen(),
+              ),
+            );
+          }
         },
         borderRadius: BorderRadius.circular(16),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: LinearGradient(
-              colors: isImageMode
+              colors: _username == null
                   ? [
-                      Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                      Theme.of(context).colorScheme.secondary.withOpacity(0.05),
+                      Colors.grey[300]!.withOpacity(0.5),
+                      Colors.grey[200]!.withOpacity(0.3),
                     ]
-                  : [
-                      Colors.blue.withOpacity(0.1),
-                      Colors.cyan.withOpacity(0.05),
-                    ],
+                  : isImageMode
+                      ? [
+                          Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          Theme.of(context).colorScheme.secondary.withOpacity(0.05),
+                        ]
+                      : [
+                          Colors.blue.withOpacity(0.1),
+                          Colors.cyan.withOpacity(0.05),
+                        ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             border: Border.all(
-              color: isImageMode
-                  ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-                  : Colors.blue.withOpacity(0.2),
+              color: _username == null
+                  ? Colors.grey[400]!.withOpacity(0.3)
+                  : isImageMode
+                      ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                      : Colors.blue.withOpacity(0.2),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: isImageMode
-                    ? Theme.of(context).colorScheme.primary.withOpacity(0.08)
-                    : Colors.blue.withOpacity(0.08),
+                color: _username == null
+                    ? Colors.grey.withOpacity(0.05)
+                    : isImageMode
+                        ? Theme.of(context).colorScheme.primary.withOpacity(0.08)
+                        : Colors.blue.withOpacity(0.08),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -148,17 +162,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isImageMode
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
-                        : Colors.blue.withOpacity(0.15),
+                    color: _username == null
+                        ? Colors.grey[300]!.withOpacity(0.3)
+                        : isImageMode
+                            ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
+                            : Colors.blue.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     icon,
                     size: 32,
-                    color: isImageMode
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.blue,
+                    color: _username == null
+                        ? Colors.grey[500]
+                        : (isImageMode
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.blue),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -170,14 +188,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         title,
                         style: Theme.of(context).textTheme.headlineSmall!.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: Colors.black87,
+                          color: _username == null ? Colors.grey[600] : Colors.black87,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        subtitle,
+                        _username == null
+                            ? "Sign in to access this feature"
+                            : subtitle,
                         style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                          color: Colors.grey[600],
+                          color: _username == null ? Colors.grey[500] : Colors.grey[600],
                           height: 1.4,
                         ),
                       ),
@@ -269,6 +289,56 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.grey[600],
               ),
             ),
+            if (_username == null) ...[
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  border: Border.all(color: Colors.orange[200]!, width: 1.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.lock_outline, color: Colors.orange[700], size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Sign in to get started",
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.orange[900],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Create an account or log in to unlock all features",
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                        color: Colors.orange[700],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _showAuthModal,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[700],
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Sign In Now'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 32),
             _buildSelectionCard(
               context: context,
@@ -276,14 +346,6 @@ class _HomeScreenState extends State<HomeScreen> {
               title: "Scan from Image",
               subtitle: "Take a photo or upload from gallery\nto extract and summarize notes",
               isImageMode: true,
-            ),
-            const SizedBox(height: 16),
-            _buildSelectionCard(
-              context: context,
-              icon: Icons.edit,
-              title: "Type/Paste Notes",
-              subtitle: "Paste or write your notes directly\nfor instant summarization",
-              isImageMode: false,
             ),
           ],
         ),
