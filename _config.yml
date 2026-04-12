@@ -1,0 +1,91 @@
+# Site configuration for GitHub Pages
+theme: just-the-docs
+
+# Site metadata
+title: StudiBro Documentation
+description: AI-powered study companion with note summarization, quiz generation, and OCR
+url: https://odhra.github.io/Final-Year-Project
+baseurl: /Final-Year-Project
+
+# Navigation structure
+nav_order: 1
+has_children: false
+
+# Search configuration
+search_enabled: true
+search_tokenizer_separator: /[\s/]+/
+
+# Footer
+footer_content: |
+  &copy; 2026 StudiBro Project. All rights reserved.  
+  Built with ❤️ at Atlantic Technological University  
+  <a href="https://github.com/odhra/Final-Year-Project">View on GitHub</a>
+
+# Color scheme (use "dark" for dark mode)
+color_scheme: light
+
+# Back to top link
+back_to_top: true
+back_to_top_text: "Back to top"
+
+# Google Analytics (optional)
+# ga_tracking: G-XXXXXXX
+
+# Auxiliary links
+aux_links:
+  "GitHub Repository": https://github.com/odhra/Final-Year-Project
+  "Project Issues": https://github.com/odhra/Final-Year-Project/issues
+
+# Heading anchors
+heading_anchors: true
+
+# Callouts
+callouts:
+  highlight:
+    title: Highlight
+    color: yellow
+  important:
+    title: Important
+    color: blue
+  warning:
+    title: Warning
+    color: red
+  note:
+    title: Note
+    color: green
+
+# Markdown processor
+markdown: kramdown
+
+# Kramdown options
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
+
+# Collections (for organizing docs)
+collections_dir: docs
+collections:
+  guides:
+    output: true
+    permalink: /guides/:path/
+
+# Plugins
+plugins:
+  - jekyll-seo-tag
+  - jekyll-feed
+  - jekyll-sitemap
+
+# Exclude from processing
+exclude:
+  - CONTRIBUTING.md
+  - node_modules/
+  - vendor/
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfile
+  - gemfile.lock
+
+# Liquid options
+liquid:
+  error_mode: strict
