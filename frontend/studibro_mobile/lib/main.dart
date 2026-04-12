@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'login.dart';
 import 'session_screen.dart';
 import 'scan_options_screen.dart';
+import 'notes_screen.dart';
 import 'auth_modal.dart';
 
 void main() async {
@@ -105,12 +106,29 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_username == null) {
             _showAuthModal();
           } else {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const ScanOptionsScreen(),
-              ),
-            );
+            // Route based on button title
+            if (title == "Scan from Image") {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ScanOptionsScreen(),
+                ),
+              );
+            } else if (title == "View Notes") {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotesScreen(),
+                ),
+              );
+            } else if (title == "View Quizzes") {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("📚 Quiz feature coming soon!"),
+                  backgroundColor: Colors.purple,
+                ),
+              );
+            }
           }
         },
         borderRadius: BorderRadius.circular(16),
@@ -346,6 +364,22 @@ class _HomeScreenState extends State<HomeScreen> {
               title: "Scan from Image",
               subtitle: "Take a photo or upload from gallery\nto extract and summarize notes",
               isImageMode: true,
+            ),
+            const SizedBox(height: 16),
+            _buildSelectionCard(
+              context: context,
+              icon: Icons.note_alt,
+              title: "View Notes",
+              subtitle: "Access your saved notes\nand summaries",
+              isImageMode: false,
+            ),
+            const SizedBox(height: 16),
+            _buildSelectionCard(
+              context: context,
+              icon: Icons.quiz,
+              title: "View Quizzes",
+              subtitle: "Review and take your\ngenerated quizzes",
+              isImageMode: false,
             ),
           ],
         ),

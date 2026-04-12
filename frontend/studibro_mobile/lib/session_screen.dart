@@ -259,23 +259,80 @@ class _SessionScreenState extends State<SessionScreen> {
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        try {
+          final data = jsonDecode(response.body);
+          print('DEBUG: Full response: ${response.body}');
+          print('DEBUG: Parsed data: $data');
+          
+          final summary = data['summary'];
+          print('DEBUG: Summary value: $summary');
+          
+          if (summary == null || summary.toString().isEmpty) {
+            setState(() {
+              _summary = "⚠️ Empty response from AI. Please try again.";
+            });
+          } else {
+            setState(() {
+              _summary = summary.toString();
+              print('DEBUG: Summary updated to: $_summary');
+            });
+          }
+        } catch (parseError) {
+          print('DEBUG: Parse error: $parseError');
+          print('DEBUG: Response body: ${response.body}');
+          setState(() {
+            _summary = "ERROR: Failed to parse response.\nResponse: ${response.body}\nError: $parseError";
+          });
+        }
+      } else if (response.statusCode == 401) {
         setState(() {
-          _summary = data['summary'] ?? "No summary generated";
+          _summary = "ERROR: Authentication failed (401).\nPlease log in again.";
         });
       } else {
         setState(() {
-          _summary = "SERVER ERROR (Code: ${response.statusCode}):\nCould not process request. Check Django logs.";
+          _summary = "SERVER ERROR (Code: ${response.statusCode}):\n${response.body}";
         });
       }
     } catch (e) {
       setState(() {
-        _summary = "CONNECTION FAILED.\n\nEnsure your Django server is running on 0.0.0.0 and your firewall is open.\nError: ${e.toString()}";
+        _summary = "CONNECTION FAILED.\n\nEnsure your Django server is running on 0.0.0.0 and your firewall is open.\n\nError: ${e.toString()}";
       });
     } finally {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _saveSummary() async {
+    try {
+      const storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'auth_token');
+
+      if (token == null) {
+        _showErrorSnackbar('Error', 'Not authenticated. Please log in again.');
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.saveSummaryEndpoint),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode({
+          "original_text": _textController.text,
+          "summary_text": _summary,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 201) {
+        _showInfoSnackbar('Success', '✅ Summary saved successfully!');
+      } else {
+        _showErrorSnackbar('Error', 'Failed to save summary (Code: ${response.statusCode})');
+      }
+    } catch (e) {
+      _showErrorSnackbar('Error', 'Failed to save: ${e.toString()}');
     }
   }
 
@@ -543,29 +600,37 @@ class _SessionScreenState extends State<SessionScreen> {
                               ),
                             )
                           : SingleChildScrollView(
-                              child: Markdown(
-                                data: _summary,
-                                styleSheet: MarkdownStyleSheet(
-                                  listBullet: const TextStyle(color: Colors.black87),
-                                  p: TextStyle(fontSize: 15, height: 1.6, color: Colors.grey[800]),
-                                  h1: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                  h2: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                  code: TextStyle(
-                                    backgroundColor: Colors.grey[200],
-                                    fontFamily: 'monospace',
-                                  ),
+                              child: Text(
+                                _summary,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  height: 1.6,
+                                  color: Colors.grey[800],
                                 ),
                               ),
                             ),
                     ),
+                    const SizedBox(height: 12),
+                    // Save button - only show if there's a summary
+                    if (_summary.isNotEmpty && !_isLoading && !_summary.startsWith('ERROR') && !_summary.startsWith('⚠️'))
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _saveSummary,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          icon: const Icon(Icons.save, color: Colors.white),
+                          label: const Text(
+                            'Save This Summary',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
