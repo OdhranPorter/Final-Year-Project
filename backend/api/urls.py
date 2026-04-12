@@ -3,7 +3,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from .views import summarize_text, register_user, save_summary, get_user_summaries, delete_summary
+from .views import summarize_text, register_user, save_summary, get_user_summaries, delete_summary, generate_quiz, save_quiz_results, get_user_quizzes
 
 urlpatterns = [
     # Summarize Route
@@ -13,6 +13,11 @@ urlpatterns = [
     path('notes/', get_user_summaries, name='get_user_summaries'),
     path('notes/save/', save_summary, name='save_summary'),
     path('notes/<int:summary_id>/delete/', delete_summary, name='delete_summary'),
+    
+    # Quiz Routes
+    path('generate-quiz/', generate_quiz, name='generate_quiz'),
+    path('quizzes/', save_quiz_results, name='save_quiz_results'),
+    path('quizzes-history/', get_user_quizzes, name='get_user_quizzes'),
     
     # Authentication Routes
     path('register/', register_user, name='register_user'),

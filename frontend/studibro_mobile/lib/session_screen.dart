@@ -8,6 +8,7 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'config.dart';
 import 'auth_modal.dart';
+import 'quiz_screen.dart';
 
 class SessionScreen extends StatefulWidget {
   final bool isImageMode;
@@ -613,23 +614,53 @@ class _SessionScreenState extends State<SessionScreen> {
                     const SizedBox(height: 12),
                     // Save button - only show if there's a summary
                     if (_summary.isNotEmpty && !_isLoading && !_summary.startsWith('ERROR') && !_summary.startsWith('⚠️'))
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _saveSummary,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          icon: const Icon(Icons.save, color: Colors.white),
-                          label: const Text(
-                            'Save This Summary',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
+                      Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _saveSummary,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              icon: const Icon(Icons.save, color: Colors.white),
+                              label: const Text(
+                                'Save This Summary',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => QuizScreen(title: 'Quiz', notes: _summary),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              icon: const Icon(Icons.quiz, color: Colors.white),
+                              label: const Text(
+                                'Start Quiz',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                   ],
                 ),
