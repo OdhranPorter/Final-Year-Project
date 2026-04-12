@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'config.dart';
 
 class SessionScreen extends StatefulWidget {
   final bool isImageMode;
@@ -17,7 +18,7 @@ class SessionScreen extends StatefulWidget {
 }
 
 class _SessionScreenState extends State<SessionScreen> {
-  final String backendUrl = 'http://192.168.0.8:8000/api/summarize/';
+  final String backendUrl = ApiConfig.summarizeEndpoint;
 
   final TextEditingController _textController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();

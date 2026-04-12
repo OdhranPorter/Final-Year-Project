@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'config.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,7 +11,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final String loginUrl = 'http://192.168.0.8:8000/api/token/';
+  final String loginUrl = ApiConfig.loginEndpoint;
   final storage = FlutterSecureStorage();
   
   final TextEditingController _usernameController = TextEditingController();
