@@ -231,7 +231,7 @@ class _FlashcardsHistoryScreenState extends State<FlashcardsHistoryScreen> {
                                     value: c,
                                     child: Text(c),
                                   ))
-                              .toList(),
+                              ,
                         ],
                         onChanged: (value) {
                           setState(() => selectedClass = value);
@@ -255,7 +255,7 @@ class _FlashcardsHistoryScreenState extends State<FlashcardsHistoryScreen> {
                                     value: y,
                                     child: Text(y),
                                   ))
-                              .toList(),
+                              ,
                         ],
                         onChanged: (value) {
                           setState(() => selectedYear = value);

@@ -3,7 +3,13 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from .views import summarize_text, register_user, save_summary, get_user_summaries, delete_summary, generate_quiz, save_quiz_results, get_user_quizzes, get_filter_options, get_quiz_filter_options, delete_quiz, generate_flashcards, save_flashcards, get_user_flashcards, get_flashcard_filter_options, delete_flashcards
+from .views import (
+    summarize_text, register_user, save_summary, get_user_summaries, delete_summary, 
+    generate_quiz, save_quiz_results, get_user_quizzes, get_filter_options, 
+    get_quiz_filter_options, delete_quiz, generate_flashcards, save_flashcards, 
+    get_user_flashcards, get_flashcard_filter_options, delete_flashcards,
+    add_test_score, get_progress_data, get_progress_filter_options, delete_test_score
+)
 
 urlpatterns = [
     # Summarize Route
@@ -28,6 +34,12 @@ urlpatterns = [
     path('flashcards-history/', get_user_flashcards, name='get_user_flashcards'),
     path('flashcards/filters/', get_flashcard_filter_options, name='get_flashcard_filter_options'),
     path('flashcards/<int:flashcard_id>/delete/', delete_flashcards, name='delete_flashcards'),
+    
+    # Progress Tracking Routes
+    path('progress/add-test-score/', add_test_score, name='add_test_score'),
+    path('progress/data/', get_progress_data, name='get_progress_data'),
+    path('progress/filters/', get_progress_filter_options, name='get_progress_filter_options'),
+    path('progress/test-score/<int:test_score_id>/delete/', delete_test_score, name='delete_test_score'),
     
     # Authentication Routes
     path('register/', register_user, name='register_user'),

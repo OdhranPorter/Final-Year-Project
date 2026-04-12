@@ -7,12 +7,14 @@ from django.contrib.auth.models import User
 import google.genai
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 import json
 import re
-from .models import Summary, Quiz, Question, QuestionOption, UserAnswer, Flashcard, FlashcardCard
+from .models import Summary, Quiz, Question, QuestionOption, UserAnswer, Flashcard, FlashcardCard, TestScore
 
 # Load the API key from the .env file
-load_dotenv()
+env_path = Path(__file__).resolve().parent.parent / '.env'
+load_dotenv(env_path)
 
 @api_view(['POST'])
 def register_user(request):
@@ -596,5 +598,208 @@ def delete_flashcards(request, flashcard_id):
     
     except Flashcard.DoesNotExist:
         return Response({"error": "Flashcard set not found or unauthorized"}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+# ============= TEST SCORE / PROGRESS TRACKING ENDPOINTS =============
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_test_score(request):
+    """Add a new in-class test score for progress tracking"""
+    try:
+        subject_class = request.data.get('subject_class')
+        year = request.data.get('year')
+        score = request.data.get('score')  # Percentage 0-100
+        test_date = request.data.get('test_date')  # YYYY-MM-DD format
+        test_name = request.data.get('test_name', 'In-Class Test')
+        notes = request.data.get('notes', '')
+        
+        # Validate required fields
+        if not all([subject_class, year, score is not None, test_date]):
+            return Response({
+                "error": "subject_class, year, score, and test_date are required"
+            }, status=400)
+        
+        # Validate score is between 0-100
+        try:
+            score_float = float(score)
+            if not (0 <= score_float <= 100):
+                return Response({"error": "Score must be between 0 and 100"}, status=400)
+        except (ValueError, TypeError):
+            return Response({"error": "Score must be a valid number"}, status=400)
+        
+        # Create the test score record
+        test_score = TestScore.objects.create(
+            user=request.user,
+            subject_class=subject_class,
+            year=year,
+            score=score_float,
+            test_date=test_date,
+            test_name=test_name,
+            notes=notes
+        )
+        
+        return Response({
+            "message": "Test score added successfully",
+            "id": test_score.id,
+            "score": test_score.score,
+            "test_date": test_score.test_date,
+            "created_at": test_score.created_at.isoformat()
+        }, status=201)
+    
+    except Exception as e:
+        import traceback
+        return Response({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_progress_data(request):
+    """Get progress data for a specific class and year, combining test scores and quiz results"""
+    try:
+        subject_class = request.query_params.get('subject_class')
+        year = request.query_params.get('year')
+        
+        if not subject_class or not year:
+            return Response({
+                "error": "subject_class and year query parameters are required"
+            }, status=400)
+        
+        # Get test scores
+        test_scores = TestScore.objects.filter(
+            user=request.user,
+            subject_class=subject_class,
+            year=year
+        ).order_by('test_date')
+        
+        # Get quiz results
+        quizzes = Quiz.objects.filter(
+            user=request.user,
+            subject_class=subject_class,
+            year=year
+        ).order_by('created_at')
+        
+        # Format test scores
+        test_data = []
+        for ts in test_scores:
+            test_data.append({
+                'id': ts.id,
+                'type': 'test',
+                'score': ts.score,
+                'date': ts.test_date.isoformat(),
+                'test_name': ts.test_name,
+                'notes': ts.notes
+            })
+        
+        # Format quiz results as percentages
+        quiz_data = []
+        for quiz in quizzes:
+            percentage = (quiz.score / quiz.total_questions * 100) if quiz.total_questions > 0 else 0
+            quiz_data.append({
+                'id': quiz.id,
+                'type': 'quiz',
+                'score': round(percentage, 1),
+                'date': quiz.created_at.date().isoformat(),
+                'test_name': 'StudiBro Quiz'
+            })
+        
+        # Combine and sort by date
+        all_scores = test_data + quiz_data
+        all_scores.sort(key=lambda x: x['date'])
+        
+        # Calculate statistics
+        all_score_values = [s['score'] for s in all_scores]
+        if all_score_values:
+            avg_score = sum(all_score_values) / len(all_score_values)
+            highest_score = max(all_score_values)
+            lowest_score = min(all_score_values)
+        else:
+            avg_score = highest_score = lowest_score = 0
+        
+        return Response({
+            "subject_class": subject_class,
+            "year": year,
+            "progress_data": all_scores,
+            "statistics": {
+                "total_entries": len(all_scores),
+                "average_score": round(avg_score, 1),
+                "highest_score": highest_score,
+                "lowest_score": lowest_score
+            }
+        }, status=200)
+    
+    except Exception as e:
+        import traceback
+        return Response({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_progress_filter_options(request):
+    """Get available class and year options for progress tracking filtering"""
+    try:
+        # Get unique classes and years from test scores
+        test_classes = TestScore.objects.filter(
+            user=request.user
+        ).values_list('subject_class', flat=True).distinct()
+        
+        test_years = TestScore.objects.filter(
+            user=request.user
+        ).values_list('year', flat=True).distinct()
+        
+        # Also include quiz data for comprehensive filtering
+        quiz_classes = Quiz.objects.filter(
+            user=request.user
+        ).values_list('subject_class', flat=True).distinct()
+        
+        quiz_years = Quiz.objects.filter(
+            user=request.user
+        ).values_list('year', flat=True).distinct()
+        
+        # Combine and remove duplicates
+        all_classes = sorted(set(list(test_classes) + list(quiz_classes)))
+        all_years = sorted(set(list(test_years) + list(quiz_years)))
+        
+        # Filter out empty strings
+        all_classes = [c for c in all_classes if c]
+        all_years = [y for y in all_years if y]
+        
+        return Response({
+            "classes": all_classes,
+            "years": all_years
+        }, status=200)
+    
+    except Exception as e:
+        import traceback
+        return Response({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, status=500)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_test_score(request, test_score_id):
+    """Delete a test score (only if it belongs to the user)"""
+    try:
+        test_score = TestScore.objects.get(id=test_score_id, user=request.user)
+        test_score.delete()
+        
+        return Response({
+            "message": "Test score deleted successfully"
+        }, status=200)
+    
+    except TestScore.DoesNotExist:
+        return Response({
+            "error": "Test score not found or unauthorized"
+        }, status=404)
     except Exception as e:
         return Response({"error": str(e)}, status=500)

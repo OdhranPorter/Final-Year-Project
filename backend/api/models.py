@@ -106,3 +106,21 @@ class FlashcardCard(models.Model):
 
     def __str__(self):
         return f"Card: {self.question[:50]}"
+
+
+# 9. TestScore - User's in-class test scores to track progress
+class TestScore(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='test_scores')
+    subject_class = models.CharField(max_length=255)  # e.g., "Physics 101", "Biology A"
+    year = models.CharField(max_length=4)  # e.g., "2024", "2025"
+    score = models.FloatField()  # Score as percentage (0-100)
+    test_date = models.DateField()  # Date the test was taken
+    test_name = models.CharField(max_length=255, blank=True, default="In-Class Test")  # Optional test name
+    notes = models.TextField(blank=True, default="")  # Optional notes about the test
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-test_date']  # Most recent first
+
+    def __str__(self):
+        return f"{self.subject_class} - {self.score}% on {self.test_date}"
