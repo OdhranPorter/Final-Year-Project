@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
-import google.genai as genai
+import google.genai
 import os
 from dotenv import load_dotenv
 import json
@@ -62,15 +62,13 @@ def summarize_text(request):
         if not api_key:
             return Response({"error": "GEMINI_API_KEY not configured"}, status=500)
         
-        import google.generativeai
-        google.generativeai.configure(api_key=api_key)
+        client = google.genai.Client(api_key=api_key)
         
         # 3. Create a prompt
         prompt = f"Summarize the following study notes into 3 concise bullet points:\n\n{user_text}"
 
         # 4. Generate Content using the Gemini 2.5 Flash model
-        model = google.generativeai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
         
         # 5. Return the result as JSON
         return Response({
@@ -202,9 +200,8 @@ def generate_quiz(request):
         if not api_key:
             return Response({"error": "GEMINI_API_KEY not configured"}, status=500)
         
-        # Use google.generativeai for quiz generation
-        import google.generativeai
-        google.generativeai.configure(api_key=api_key)
+        # Use google.genai for quiz generation
+        client = google.genai.Client(api_key=api_key)
         
         # Prompt to generate multiple-choice questions
         prompt = f"""Generate exactly 5 multiple-choice quiz questions based on these study notes. 
@@ -222,8 +219,7 @@ Return ONLY valid JSON with this structure (no other text):
 Study notes:
 {text}"""
 
-        model = google.generativeai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
         
         # Extract JSON from response
         response_text = response.text.strip()
