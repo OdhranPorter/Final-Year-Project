@@ -1,9 +1,0 @@
-{
-  "build": {
-    "builder": "dockerfile"
-  },
-  "deploy": {
-    "numReplicas": 1,
-    "startCommand": "gunicorn studibro_project.wsgi"
-  }
-}
