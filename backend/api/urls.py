@@ -3,7 +3,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from .views import summarize_text, register_user, save_summary, get_user_summaries, delete_summary, generate_quiz, save_quiz_results, get_user_quizzes, get_filter_options, get_quiz_filter_options
+from .views import summarize_text, register_user, save_summary, get_user_summaries, delete_summary, generate_quiz, save_quiz_results, get_user_quizzes, get_filter_options, get_quiz_filter_options, delete_quiz, generate_flashcards, save_flashcards, get_user_flashcards, get_flashcard_filter_options, delete_flashcards
 
 urlpatterns = [
     # Summarize Route
@@ -20,6 +20,14 @@ urlpatterns = [
     path('quizzes/', save_quiz_results, name='save_quiz_results'),
     path('quizzes-history/', get_user_quizzes, name='get_user_quizzes'),
     path('quizzes/filters/', get_quiz_filter_options, name='get_quiz_filter_options'),
+    path('quizzes-history/<int:quiz_id>/delete/', delete_quiz, name='delete_quiz'),
+    
+    # Flashcard Routes
+    path('generate-flashcards/', generate_flashcards, name='generate_flashcards'),
+    path('flashcards/', save_flashcards, name='save_flashcards'),
+    path('flashcards-history/', get_user_flashcards, name='get_user_flashcards'),
+    path('flashcards/filters/', get_flashcard_filter_options, name='get_flashcard_filter_options'),
+    path('flashcards/<int:flashcard_id>/delete/', delete_flashcards, name='delete_flashcards'),
     
     # Authentication Routes
     path('register/', register_user, name='register_user'),

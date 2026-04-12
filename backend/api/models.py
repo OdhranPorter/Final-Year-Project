@@ -81,3 +81,28 @@ class UserAnswer(models.Model):
 
     def __str__(self):
         return f"Answer to Q{self.question.id}: {self.user_response[:30]}"
+
+
+# 7. Flashcard Set - Collection of flashcards generated from user notes
+class Flashcard(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='flashcards')
+    title = models.CharField(max_length=255, default="Flashcard Set")
+    original_text = models.TextField(blank=True, default="")
+    subject_class = models.CharField(max_length=255, blank=True, default="")  # e.g., "Physics 101"
+    year = models.CharField(max_length=4, blank=True, default="")  # e.g., "2024"
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Flashcard Set: {self.title}"
+
+
+# 8. FlashcardCard - Individual cards within a flashcard set
+class FlashcardCard(models.Model):
+    flashcard = models.ForeignKey(Flashcard, on_delete=models.CASCADE, related_name='cards')
+    question = models.TextField()  # Question/front of card
+    answer = models.TextField()    # Answer/back of card
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Card: {self.question[:50]}"

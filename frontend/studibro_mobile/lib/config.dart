@@ -16,6 +16,10 @@ class ApiConfig {
   static const String quizEndpoint = '$baseUrl/quiz/';
   static const String answerEndpoint = '$baseUrl/answer/';
   static const String historyEndpoint = '$baseUrl/history/';
+  static const String generateFlashcardsEndpoint = '$baseUrl/generate-flashcards/';
+  static const String saveFlashcardsEndpoint = '$baseUrl/flashcards/';
+  static const String flashcardsHistoryEndpoint = '$baseUrl/flashcards-history/';
+  static const String flashcardFiltersEndpoint = '$baseUrl/flashcards/filters/';
   
   // Timeout duration for HTTP requests (in seconds)
   static const int requestTimeout = 30;

@@ -4,6 +4,7 @@ import 'login.dart';
 import 'scan_options_screen.dart';
 import 'notes_screen.dart';
 import 'quizzes_history_screen.dart';
+import 'flashcards_history_screen.dart';
 import 'auth_modal.dart';
 
 void main() async {
@@ -126,6 +127,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const QuizzesHistoryScreen(),
+                ),
+              );
+            } else if (title == "View Flashcards") {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FlashcardsHistoryScreen(),
                 ),
               );
             }
@@ -379,6 +387,14 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.quiz,
               title: "View Quizzes",
               subtitle: "Review and take your\ngenerated quizzes",
+              isImageMode: false,
+            ),
+            const SizedBox(height: 16),
+            _buildSelectionCard(
+              context: context,
+              icon: Icons.library_books,
+              title: "View Flashcards",
+              subtitle: "Study with your\ngenerated flashcards",
               isImageMode: false,
             ),
           ],

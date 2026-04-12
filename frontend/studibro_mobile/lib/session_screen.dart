@@ -8,6 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'config.dart';
 import 'auth_modal.dart';
 import 'quiz_screen.dart';
+import 'flashcard_screen.dart';
 
 class SessionScreen extends StatefulWidget {
   final bool isImageMode;
@@ -332,9 +333,7 @@ class _SessionScreenState extends State<SessionScreen> {
 
       if (response.statusCode == 201) {
         _showInfoSnackbar('Success', '✅ Summary saved successfully!');
-        // Clear the form after saving
-        _classController.clear();
-        _yearController.clear();
+        // Keep class and year values so user can create flashcards/quiz without re-entering
       } else {
         _showErrorSnackbar('Error', 'Failed to save summary (Code: ${response.statusCode})');
       }
@@ -655,61 +654,92 @@ class _SessionScreenState extends State<SessionScreen> {
                                   ],
                                 ),
                               ),
-                            // Save button - only show if there's a summary
-                            if (_summary.isNotEmpty && !_isLoading && !_summary.startsWith('ERROR') && !_summary.startsWith('⚠️'))
-                              Column(
-                                children: [
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: _saveSummary,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                      ),
-                                      icon: const Icon(Icons.save, color: Colors.white),
-                                      label: const Text(
-                                        'Save This Summary',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => QuizScreen(
-                                              title: 'Quiz',
-                                              notes: _summary,
-                                              subjectClass: _classController.text,
-                                              year: _yearController.text,
+                                  Column(
+                                    children: [
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton.icon(
+                                          onPressed: _saveSummary,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.green,
+                                            padding: const EdgeInsets.symmetric(vertical: 12),
+                                          ),
+                                          icon: const Icon(Icons.save, color: Colors.white),
+                                          label: const Text(
+                                            'Save This Summary',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blue,
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                      ),
-                                      icon: const Icon(Icons.quiz, color: Colors.white),
-                                      label: const Text(
-                                        'Start Quiz',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                    ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) => QuizScreen(
+                                                      title: 'Quiz',
+                                                      notes: _summary,
+                                                      subjectClass: _classController.text,
+                                                      year: _yearController.text,
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.blue,
+                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                              ),
+                                              icon: const Icon(Icons.quiz, color: Colors.white),
+                                              label: const Text(
+                                                'Quiz',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) => FlashcardScreen(
+                                                      title: 'Flashcards',
+                                                      notes: _summary,
+                                                      subjectClass: _classController.text,
+                                                      year: _yearController.text,
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.purple,
+                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                              ),
+                                              icon: const Icon(Icons.library_books, color: Colors.white),
+                                              label: const Text(
+                                                'Flashcards',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
                           ],
                         ),
                       ),
