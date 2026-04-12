@@ -4,7 +4,7 @@ import 'package:studibro_mobile/main.dart';
 
 void main() {
   group('HomeScreen Tests', () {
-    // home screen shows studibro home title
+    // home screen shows studibro title
     testWidgets('Home screen displays title', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -13,10 +13,11 @@ void main() {
         ),
       );
 
-      expect(find.text('StudiBro Home'), findsOneWidget);
+      // Updated from "StudiBro Home" to "StudiBro"
+      expect(find.text('StudiBro'), findsOneWidget);
     });
 
-    // logout button is visible on home screen
+    // login button is visible on home screen when not logged in
     testWidgets('Home screen has logout button', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -25,7 +26,8 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(Icons.logout), findsOneWidget);
+      // When not logged in, shows login button
+      expect(find.byIcon(Icons.login), findsOneWidget);
     });
 
     // scan card option shows on home
@@ -37,7 +39,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Scan (Image/OCR)'), findsOneWidget);
+      // Updated card title to match new implementation
+      expect(find.text('Scan from Image'), findsOneWidget);
     });
 
     // paste card option shows on home
@@ -49,7 +52,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Paste (Manual Text)'), findsOneWidget);
+      // Updated card title to match new implementation
+      expect(find.text('Type/Paste Notes'), findsOneWidget);
     });
 
     // studibro branding displays on home screen
