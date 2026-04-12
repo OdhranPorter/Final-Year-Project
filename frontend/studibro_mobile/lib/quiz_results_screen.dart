@@ -10,6 +10,8 @@ class QuizResultsScreen extends StatefulWidget {
   final List<Map<String, dynamic>> questions;
   final List<int?> userAnswers;
   final String notes;
+  final String? subjectClass;  // Class/subject for the quiz
+  final String? year;  // Year for the quiz
 
   const QuizResultsScreen({
     super.key,
@@ -18,6 +20,8 @@ class QuizResultsScreen extends StatefulWidget {
     required this.questions,
     required this.userAnswers,
     required this.notes,
+    this.subjectClass,
+    this.year,
   });
 
   @override
@@ -51,6 +55,8 @@ class _QuizResultsScreenState extends State<QuizResultsScreen> {
           "total_questions": widget.totalQuestions,
           "questions": widget.questions,
           "original_text": widget.notes,
+          "subject_class": widget.subjectClass ?? '',
+          "year": widget.year ?? '',
         }),
       ).timeout(const Duration(seconds: 10));
 

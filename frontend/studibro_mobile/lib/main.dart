@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'login.dart';
-import 'session_screen.dart';
 import 'scan_options_screen.dart';
 import 'notes_screen.dart';
 import 'quizzes_history_screen.dart';

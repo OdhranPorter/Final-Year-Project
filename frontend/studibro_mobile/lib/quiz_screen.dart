@@ -9,12 +9,16 @@ class QuizScreen extends StatefulWidget {
   final String notes;
   final String title;
   final List<Map<String, dynamic>>? existingQuestions;
+  final String? subjectClass;  // Class/subject for the quiz
+  final String? year;  // Year for the quiz
 
   const QuizScreen({
     super.key,
     required this.notes,
     required this.title,
     this.existingQuestions,
+    this.subjectClass,
+    this.year,
   });
 
   @override
@@ -200,6 +204,8 @@ class _QuizScreenState extends State<QuizScreen> {
             questions: questions,
             userAnswers: userAnswers,
             notes: widget.notes,
+            subjectClass: widget.subjectClass,
+            year: widget.year,
           ),
         ),
       );

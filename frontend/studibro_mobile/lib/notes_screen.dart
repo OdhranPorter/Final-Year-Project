@@ -16,11 +16,18 @@ class _NotesScreenState extends State<NotesScreen> {
   List<Map<String, dynamic>> _notes = [];
   bool _isLoading = true;
   String? _username;
+  
+  // Filter state
+  List<String> _availableClasses = [];
+  List<String> _availableYears = [];
+  String? _selectedClass;
+  String? _selectedYear;
 
   @override
   void initState() {
     super.initState();
     _loadUsername();
+    _fetchFilterOptions();
     _fetchNotes();
   }
 
@@ -48,6 +55,35 @@ class _NotesScreenState extends State<NotesScreen> {
     }
   }
 
+  Future<void> _fetchFilterOptions() async {
+    try {
+      const storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'auth_token');
+
+      if (token == null) return;
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.notesFiltersEndpoint),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (mounted) {
+          setState(() {
+            _availableClasses = List<String>.from(data['classes'] ?? []);
+            _availableYears = List<String>.from(data['years'] ?? []);
+          });
+        }
+      }
+    } catch (e) {
+      // Silently ignore errors in fetching filters
+    }
+  }
+
   Future<void> _fetchNotes() async {
     try {
       const storage = FlutterSecureStorage();
@@ -61,8 +97,19 @@ class _NotesScreenState extends State<NotesScreen> {
         return;
       }
 
+      // Build query parameters based on filters
+      var queryParams = <String, String>{};
+      if (_selectedClass != null && _selectedClass!.isNotEmpty) {
+        queryParams['subject_class'] = _selectedClass!;
+      }
+      if (_selectedYear != null && _selectedYear!.isNotEmpty) {
+        queryParams['year'] = _selectedYear!;
+      }
+
+      final uri = Uri.parse(ApiConfig.notesEndpoint).replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
       final response = await http.get(
-        Uri.parse(ApiConfig.notesEndpoint),
+        uri,
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
@@ -213,6 +260,34 @@ class _NotesScreenState extends State<NotesScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                if (note['subject_class'] != null && note['subject_class']!.isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Class: ${note['subject_class']}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                  ),
+                if (note['year'] != null && note['year']!.isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Year: ${note['year']}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                  ),
                 if (note['created_at'] != null)
                   Text(
                     'Saved: ${note['created_at']}',
@@ -277,82 +352,185 @@ class _NotesScreenState extends State<NotesScreen> {
           ? const Center(
               child: CircularProgressIndicator(),
             )
-          : _notes.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.note_alt_outlined,
-                        size: 64,
-                        color: Colors.grey[300],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No saved notes yet',
-                        style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Generate a summary and save it here',
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _fetchNotes,
-                  child: ListView.builder(
+          : Column(
+              children: [
+                // Filter section
+                if (_availableClasses.isNotEmpty || _availableYears.isNotEmpty)
+                  Container(
                     padding: const EdgeInsets.all(16),
-                    itemCount: _notes.length,
-                    itemBuilder: (context, index) {
-                      final note = _notes[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: InkWell(
-                          onTap: () => _showNoteDetails(note),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Summary',
-                                  style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  note['original_text'] ?? 'No content',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Tap to view',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[500],
-                                        fontStyle: FontStyle.italic,
-                                      ),
+                    color: Colors.white,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Filter Notes',
+                          style: Theme.of(context).textTheme.titleSmall!.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            // Class filter
+                            if (_availableClasses.isNotEmpty)
+                              Expanded(
+                                child: DropdownButton<String>(
+                                  isExpanded: true,
+                                  value: _selectedClass,
+                                  hint: Text('By Class', style: TextStyle(color: Colors.grey[600])),
+                                  items: [
+                                    DropdownMenuItem<String>(
+                                      value: null,
+                                      child: const Text('All Classes'),
                                     ),
-                                    if (note['created_at'] != null)
-                                      Text(
-                                        note['created_at'].toString().split('T')[0],
-                                        style: TextStyle(
+                                    ..._availableClasses
+                                        .map((c) => DropdownMenuItem<String>(
+                                          value: c,
+                                          child: Text(c),
+                                        ))
+                                        .toList(),
+                                  ],
+                                  onChanged: (value) {
+                                    setState(() => _selectedClass = value);
+                                    _fetchNotes();
+                                  },
+                                ),
+                              ),
+                            const SizedBox(width: 12),
+                            // Year filter
+                            if (_availableYears.isNotEmpty)
+                              Expanded(
+                                child: DropdownButton<String>(
+                                  isExpanded: true,
+                                  value: _selectedYear,
+                                  hint: Text('By Year', style: TextStyle(color: Colors.grey[600])),
+                                  items: [
+                                    DropdownMenuItem<String>(
+                                      value: null,
+                                      child: const Text('All Years'),
+                                    ),
+                                    ..._availableYears
+                                        .map((y) => DropdownMenuItem<String>(
+                                          value: y,
+                                          child: Text(y),
+                                        ))
+                                        .toList(),
+                                  ],
+                                  onChanged: (value) {
+                                    setState(() => _selectedYear = value);
+                                    _fetchNotes();
+                                  },
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                // Notes list
+                Expanded(
+                  child: _notes.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.note_alt_outlined,
+                                size: 64,
+                                color: Colors.grey[300],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No saved notes yet',
+                                style: Theme.of(context).textTheme.titleLarge!.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Generate a summary and save it here',
+                                style: TextStyle(
+                                  color: Colors.grey[500],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _fetchNotes,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _notes.length,
+                            itemBuilder: (context, index) {
+                              final note = _notes[index];
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                child: InkWell(
+                                  onTap: () => _showNoteDetails(note),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Summary',
+                                          style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        // Display class and year if available
+                                        if (note['subject_class'] != null && note['subject_class']!.isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(bottom: 4),
+                                            child: Text(
+                                              'Class: ${note['subject_class']}',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.blue[600],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        if (note['year'] != null && note['year']!.isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(bottom: 8),
+                                            child: Text(
+                                              'Year: ${note['year']}',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.purple[600],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          note['original_text'] ?? 'No content',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Tap to view',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[500],
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                            ),
+                                            if (note['created_at'] != null)
+                                              Text(
+                                                note['created_at'].toString().split('T')[0],
+                                                style: TextStyle(
                                           fontSize: 12,
                                           color: Colors.grey[500],
                                         ),
@@ -370,6 +548,8 @@ class _NotesScreenState extends State<NotesScreen> {
                                           builder: (context) => QuizScreen(
                                             title: 'Quiz',
                                             notes: note['summary'] ?? note['original_text'] ?? '',
+                                            subjectClass: note['subject_class'],
+                                            year: note['year'],
                                           ),
                                         ),
                                       );
@@ -391,6 +571,9 @@ class _NotesScreenState extends State<NotesScreen> {
                     },
                   ),
                 ),
+              ),
+            ],
+          ),
     );
   }
 }

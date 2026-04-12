@@ -24,9 +24,9 @@ class SummaryApiTests(TestCase):
             'content_type': 'application/json'
         }
 
+    @patch('api.views.google.genai.Client')
     @patch('api.views.os.getenv')
-    @patch('api.views.genai.Client')
-    def test_summarize_success(self, mock_client_class, mock_getenv):
+    def test_summarize_success(self, mock_getenv, mock_client_class):
         """Test successful summary generation with mocked Gemini response."""
         # Mock the environment variable
         mock_getenv.return_value = "fake-api-key"
