@@ -44,7 +44,7 @@ void main() {
     });
 
     // paste card option shows on home
-    testWidgets('Paste card is displayed', (WidgetTester tester) async {
+    testWidgets('Sign in prompt is displayed when not logged in', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: const HomeScreen(),
@@ -52,8 +52,8 @@ void main() {
         ),
       );
 
-      // Updated card title to match new implementation
-      expect(find.text('Type/Paste Notes'), findsOneWidget);
+      // When not logged in, a sign in prompt should be visible
+      expect(find.text('Sign in to get started'), findsOneWidget);
     });
 
     // studibro branding displays on home screen
