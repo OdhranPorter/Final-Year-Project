@@ -4,7 +4,7 @@ AI-powered study companion for note summarization, quiz generation, and flashcar
 
 ## Quick Links
 
-📖 [Getting Started](getting-started.md) • 🔌 [API Docs](api-documentation.md) • 🏗️ [Architecture](architecture.md) • 🚀 [Deploy](deployment.md)
+📖 [Getting Started](getting-started.md) • 🔌 [API Docs](api-documentation.md) • 🏗️ [Architecture](architecture.md)
 
 ## Features
 
