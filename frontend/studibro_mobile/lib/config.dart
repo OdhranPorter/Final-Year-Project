@@ -1,6 +1,5 @@
 /// API Configuration for StudiBro
 class ApiConfig {
-  // Change this to match your backend server IP/domain
   static const String baseUrl = 'https://final-year-project-production-1c21.up.railway.app/api';
   
   // API Endpoints
