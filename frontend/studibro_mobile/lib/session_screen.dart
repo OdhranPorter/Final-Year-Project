@@ -430,7 +430,7 @@ class _SessionScreenState extends State<SessionScreen> {
                     child: TextField(
                       controller: _textController,
                       maxLines: 8,
-                      readOnly: widget.isImageMode && _selectedImage == null,
+                      readOnly: false,
                       decoration: InputDecoration(
                         hintText: widget.isImageMode
                             ? "Extracted Text (Tap Scan to update)"
