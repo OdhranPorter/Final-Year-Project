@@ -41,7 +41,7 @@ dependencies:
   shared_preferences: ^2.2.1
   google_mlkit_text_recognition: ^0.15.1
   fl_chart: ^0.69.0
-  syncfusion_flutter_charts: ^24.1.41
+  syncfusion_flutter_charts: ^34.1.32
 
 dev_dependencies:
   flutter_test:
